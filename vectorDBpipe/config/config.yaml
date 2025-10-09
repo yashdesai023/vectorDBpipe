@@ -1,0 +1,28 @@
+# Configuration file for vectorDBpipe
+# Controls paths, model, and vector DB backend setup.
+
+paths:
+  base_dir: "artifacts"
+  data_dir: "data/"
+  processed_dir: "artifacts/processed/"
+  embeddings_dir: "artifacts/embeddings/"
+  vectordb_dir: "artifacts/vectordb/"
+  logs_dir: "logs/"
+
+model:
+  name: "sentence-transformers/all-MiniLM-L6-v2"
+  type: "text-embedding"
+  batch_size: 32
+
+embedding:
+  model_name: "text-embedding-3-small"
+
+vector_db:
+  type: "pinecone"
+  api_key: "YOUR_API_KEY"
+  index_name: "project-index"
+  persist_directory: "data/chroma_store"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
