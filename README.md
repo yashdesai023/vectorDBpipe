@@ -2,7 +2,7 @@
 
 **Version:** 0.1.0  
 **Author:** Yash Desai  
-**Email:** yash.desai@gmail.com  
+**Email:** desaisyash1000@gmail.com  
 
 ---
 
@@ -167,9 +167,10 @@ See [LICENSE](LICENSE) for more details.
 ## 🔗 Contact
 
 **Author:** Yash Desai  
-**Email:** [yash.desai@gmail.com](mailto:yash.desai@gmail.com)  
+**Email:** [yash.desai@gmail.com](mailto:desaisyash@gmail.com)  
 **GitHub:** [https://github.com/yashdesai023/vectorDBpipe](https://github.com/yashdesai023/vectorDBpipe)
 
 ---
 
 *Ready for contributions and feedback! If you need a polished demo notebook, let me know!*
+
