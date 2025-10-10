@@ -25,16 +25,30 @@ Designed to streamline text preprocessing, embedding generation, and semantic se
 
 ## 💻 Installation
 
+Install `vectorDBpipe` directly from PyPI:
+
 ```bash
-# Clone the repository
-git clone https://github.com/yashdesai023/vectorDBpipe.git
-cd vectorDBpipe
+pip install vectorDBpipe
+```
 
-# Install dependencies
-pip install -r requirements.txt
+---
 
-# Optional: Install additional vector DB clients
-pip install faiss-cpu chromadb pinecone-client
+## ⚙️ Configuration
+
+`vectorDBpipe` uses a `config.yaml` file for configuration. You can customize paths, models, and vector database settings.
+
+### Pinecone API Key
+
+If you use the `pinecone` vector database, you must provide your API key via an environment variable. The library will automatically load it.
+
+**Linux/macOS:**
+```bash
+export PINECONE_API_KEY="YOUR_API_KEY"
+```
+
+**Windows:**
+```powershell
+$env:PINECONE_API_KEY="YOUR_API_KEY"
 ```
 
 ---
@@ -167,7 +181,7 @@ See [LICENSE](LICENSE) for more details.
 ## 🔗 Contact
 
 **Author:** Yash Desai  
-**Email:** [yash.desai@gmail.com](mailto:desaisyash@gmail.com)  
+**Email:** [desaisyash1000@gmail.com](mailto:desaisyash1000@gmail.com)  
 **GitHub:** [https://github.com/yashdesai023/vectorDBpipe](https://github.com/yashdesai023/vectorDBpipe)
 
 ---

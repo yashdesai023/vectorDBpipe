@@ -1,0 +1,24 @@
+[2025-10-10 12:35:10] [INFO] Embedder: Initializing embedder with model: all-MiniLM-L6-v2
+[2025-10-10 12:47:29] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:47:37] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:47:37] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 12:47:37] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:50:18] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:50:23] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:50:23] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 12:50:23] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:51:30] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:51:35] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:53:23] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:53:28] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:53:28] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 12:53:28] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:55:32] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:55:38] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:55:38] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 12:55:38] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:59:26] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:59:30] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 12:59:30] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 12:59:30] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 12:59:35] [INFO] TextPipeline: Pipeline completed successfully.
