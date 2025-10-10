@@ -3,3 +3,4 @@ pytest-cov
 tox
 flake8
 mypy
+docx2txt
