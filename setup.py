@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vectordbpipe",  # Corrected to lowercase
-    version="0.1.1",      # Updated to a new version
+    version="0.1.2",      # Updated to a new version
     author="Yash Desai",
     author_email="desaisyash1000@gmail.com",
     description="A modular text embedding and vector database pipeline for local and cloud vector stores.",

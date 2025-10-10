@@ -2,7 +2,7 @@
 
 # **vectorDBpipe**
 
-**Version:** 0.1.3
+**Version:** 0.1.2
 **Author:** Yash Desai
 **Email:** [desaisyash1000@gmail.com](mailto:desaisyash1000@gmail.com)
 
