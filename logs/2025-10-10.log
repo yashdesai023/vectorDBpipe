@@ -22,3 +22,8 @@
 [2025-10-10 12:59:30] [INFO] TextPipeline: Initializing TextPipeline with configuration
 [2025-10-10 12:59:30] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
 [2025-10-10 12:59:35] [INFO] TextPipeline: Pipeline completed successfully.
+[2025-10-10 13:42:45] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 13:42:53] [INFO] Embedder: Generated 1 embeddings.
+[2025-10-10 13:42:53] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2025-10-10 13:42:53] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2025-10-10 13:42:58] [INFO] TextPipeline: Pipeline completed successfully.
