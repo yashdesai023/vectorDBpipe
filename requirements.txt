@@ -30,3 +30,4 @@ isort>=5.13.2
 docx2txt
 fitz
 frontend
+PyMuPDF
