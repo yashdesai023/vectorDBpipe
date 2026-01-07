@@ -78,17 +78,36 @@ class ChromaVectorStore(BaseVectorStore):
 class PineconeVectorStore(BaseVectorStore):
     def __init__(self, api_key: str, index_name: str, dimension: int = 1536):
         try:
-            import pinecone
-        except Exception as e:
-            raise RuntimeError("pinecone-client is required for PineconeVectorStore: pip install pinecone-client") from e
+            from pinecone import Pinecone
+        except ImportError:
+            try:
+                # Fallback for older versions just in case, or clearer error
+                import pinecone
+            except Exception as e:
+                raise RuntimeError("pinecone-client is required: pip install pinecone-client") from e
 
-        pinecone.init(api_key=api_key)
+        # Initialize Pinecone client (v3+)
+        self.pc = Pinecone(api_key=api_key)
         self.index_name = index_name
 
-        if index_name not in pinecone.list_indexes():
-            pinecone.create_index(index_name, dimension=dimension, metric="cosine")
+        # Check if index exists
+        existing_indexes = [i.name for i in self.pc.list_indexes()]
+        if index_name not in existing_indexes:
+            # Create index with serverless spec or default (simplified for now)
+            # Note: create_index in v3 requires spec. For now, we assume user created it or we need more config.
+            # But to keep it simple and compatible with simple usage:
+            try:
+                from pinecone import ServerlessSpec
+                self.pc.create_index(
+                    name=index_name, 
+                    dimension=dimension, 
+                    metric="cosine",
+                    spec=ServerlessSpec(cloud="aws", region="us-east-1") # Defaulting to common region
+                )
+            except Exception:
+                logger.warning("Could not create Pinecone index automatically. Ensure it exists.")
 
-        self.index = pinecone.Index(index_name)
+        self.index = self.pc.Index(index_name)
         logger.info(f"Connected to Pinecone index: {index_name}")
 
     def insert_vectors(self, vectors, metadata=None):

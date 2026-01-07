@@ -1,0 +1,37 @@
+# CPU-Optimized Requirements for vectorDBpipe
+# Usage: pip install -r requirements-cpu.txt
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Essential for Windows DLL fix
+intel-openmp
+
+# Torch CPU versions (Explicitly requested before others to ensure CPU version is picked)
+torch>=2.2.0
+torchvision
+
+# Core ML + Vector Database
+chromadb>=0.5.0
+sentence-transformers>=3.0.1
+
+# Data Processing & Parsing
+beautifulsoup4>=4.12.2
+pandas>=2.2.2
+numpy>=1.26.4
+PyYAML>=6.0.1
+pypdf>=2.12.1
+python-docx>=1.1.0
+PyMuPDF
+
+# Configuration & Logging
+python-dotenv>=1.0.1
+tqdm>=4.66.4
+
+# Testing & Coverage
+pytest>=8.4.2
+pytest-cov>=7.0.0
+tox>=4.15.0
+
+# Optional Utilities
+requests>=2.32.3
+typing-extensions>=4.12.2

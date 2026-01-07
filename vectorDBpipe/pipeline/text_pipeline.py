@@ -38,10 +38,12 @@ class TextPipeline:
             config=self.vector_db_cfg
         )
 
-    def process(self):
+    def process(self, batch_size=100):
         """
-        End-to-end document processing pipeline:
+        End-to-end document processing pipeline with batch processing:
         1. Load -> 2. Clean & Chunk -> 3. Embed -> 4. Store
+        
+        :param batch_size: Number of chunks to process in a single batch to manage memory.
         """
         try:
             self.logger.info("Starting document processing pipeline...")
@@ -54,8 +56,12 @@ class TextPipeline:
 
             self.logger.info(f"Found {len(documents)} documents to process.")
             
-            all_chunks = []
-            metadata_list = []
+            # Temporary storage for batch processing
+            chunk_batch = []
+            metadata_batch = []
+            
+            total_chunks = 0
+            
             for doc in documents:
                 content = doc.get("content")
                 source = doc.get("source")
@@ -64,71 +70,47 @@ class TextPipeline:
                 
                 cleaned = clean_text(content)
                 chunks = chunk_text(cleaned, chunk_size=512)
-                all_chunks.extend(chunks)
-                metadata_list.extend([{"source": source, "text": chunk} for chunk in chunks])
+                
+                # Add chunks to current batch
+                chunk_batch.extend(chunks)
+                metadata_batch.extend([{"source": source, "text": chunk} for chunk in chunks])
+                
+                # If batch size exceeded, process and flush
+                if len(chunk_batch) >= batch_size:
+                    self._embed_and_store(chunk_batch, metadata_batch)
+                    total_chunks += len(chunk_batch)
+                    chunk_batch = []
+                    metadata_batch = []
+            
+            # Process remaining chunks
+            if chunk_batch:
+                self._embed_and_store(chunk_batch, metadata_batch)
+                total_chunks += len(chunk_batch)
 
-            if not all_chunks:
+            if total_chunks == 0:
                 self.logger.warning("No text chunks were generated after cleaning. Exiting process.")
-                return
-
-            self.logger.info(f"Generated {len(all_chunks)} chunks for embedding.")
-            
-            self.logger.info("Generating embeddings...")
-            embeddings = self.embedder.encode(all_chunks)
-            
-            self.logger.info("Storing embeddings in the vector database...")
-            # ensure embeddings are lists for storage backends
-            emb_as_list = embeddings.tolist() if hasattr(embeddings, "tolist") else embeddings
-            self.vector_store.insert_vectors(emb_as_list, metadata=metadata_list)
-            
-            self.logger.info("Pipeline completed successfully!")
+            else:
+                self.logger.info(f"Pipeline completed successfully! Processed {total_chunks} total chunks.")
 
         except Exception as e:
             self.logger.exception(f"Pipeline failed due to: {str(e)}")
             raise
 
-    def search(self, query, top_k=5):
-        """
-        Query the vector store to find semantically similar content.
-        """
-        try:
-            self.logger.info(f"Searching for top {top_k} results for query: '{query[:100]}...'")
-            query_embedding = self.embedder.encode(query)
-            
-            # Convert to python list
-            if hasattr(query_embedding, "tolist"):
-                qvec = query_embedding.tolist()[0] if isinstance(query_embedding.tolist(), list) and isinstance(query_embedding.tolist()[0], list) else query_embedding.tolist()
-            else:
-                qvec = query_embedding
-
-            results = self.vector_store.search_vectors(qvec, top_k=top_k)
-            self.logger.info("Search completed.")
-            return results
-            
-        except Exception as e:
-            self.logger.exception(f"Search failed: {e}")
-            return []
+    def _embed_and_store(self, chunks, metadata):
+        """Helper to embed and store a batch of chunks."""
+        self.logger.info(f"Processing batch of {len(chunks)} chunks...")
+        embeddings = self.embedder.encode(chunks)
+        
+        # ensure embeddings are lists for storage backends
+        emb_as_list = embeddings.tolist() if hasattr(embeddings, "tolist") else embeddings
+        self.vector_store.insert_vectors(emb_as_list, metadata=metadata)
+        self.logger.info("Batch stored.")
 
     def run(self):
-        """Executes the full text processing pipeline."""
-        self.logger.info("Running TextPipeline: load → embed → store")
-
-        # Step 1: Load data
-        data = self.loader.load_data()
-        if not data:
-            self.logger.warning("No data found to process.")
-            return None
-
-        # Step 2: Embed texts
-        if isinstance(data[0], dict) and "content" in data[0]:
-            texts = [d["content"] for d in data]
-        else:
-            texts = data
-
-        embeddings = self.embedder.embed_texts(texts)
-
-        # Step 3: Store vectors
-        self.vector_store.insert_vectors(embeddings, texts)
-        self.logger.info("Pipeline completed successfully.")
-
+        """
+        Deprecated: Use process() instead.
+        Executes the full text processing pipeline.
+        """
+        self.logger.warning("'run()' is deprecated and will be removed. Please use 'process()' instead. Calling process() now.")
+        self.process()
         return True

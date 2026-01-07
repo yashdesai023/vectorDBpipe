@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
-Name: vectorDBpipe
-Version: 0.1.0
+Metadata-Version: 2.4
+Name: vectordbpipe
+Version: 0.1.3
 Summary: A modular text embedding and vector database pipeline for local and cloud vector stores.
 Author: Yash Desai
 Author-email: desaisyash1000@gmail.com
@@ -10,194 +10,245 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: faiss-cpu>=1.7.4
+Requires-Dist: sentence-transformers>=2.2.2
+Requires-Dist: transformers>=4.28.1
+Requires-Dist: torch>=2.2.0
+Requires-Dist: torchvision
+Requires-Dist: chromadb>=0.4.22
+Requires-Dist: pinecone-client>=3.0.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: tqdm>=4.66.0
+Requires-Dist: docx2txt>=0.8
+Requires-Dist: beautifulsoup4>=4.12.3
+Requires-Dist: PyMuPDF>=1.23.26
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
-# vectorDBpipe
+# 🚀 vectorDBpipe
 
-**Version:** 0.1.0  
-**Author:** Yash Desai  
-**Email:** desaisyash1000@gmail.com  
+[![PyPI version](https://badge.fury.io/py/vectordbpipe.svg)](https://badge.fury.io/py/vectordbpipe)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![Pinecone](https://img.shields.io/badge/Pinecone-Supported-green)](https://www.pinecone.io/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Supported-orange)](https://www.trychroma.com/)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Models-yellow)](https://huggingface.co/)
+[![FAISS](https://img.shields.io/badge/FAISS-Compatible-blue)](https://github.com/facebookresearch/faiss)
+
+**A Modular, End-to-End RAG Pipeline for Production-Ready Vector Search.**
+
+`vectorDBpipe` is a robust framework designed to automate the heavy lifting of building RAG (Retrieval-Augmented Generation) systems. It seamlessly handles **data ingestion**, **text cleaning**, **semantic embedding**, and **storage** in modern vector databases.
 
 ---
 
-A modular **text embedding and vector database pipeline** for local and cloud vector stores.  
-Designed to streamline text preprocessing, embedding generation, and semantic search with multiple backends such as **FAISS, Chroma, and Pinecone**.
+## 🎯 Project Objectives
+
+Building a vector search system often involves writing the same "glue code" over and over again:
+1. Parsing PDFs, Word docs, and Text files.
+2. Cleaning funny characters and whitespace.
+3. Chunking long text so it fits into context windows.
+4. Batching embeddings to avoid OOM (Out-of-Memory) errors.
+5. Creating and managing database indexes.
+
+**`vectorDBpipe` solves this.** It is a "download-and-go" architected solution that reduces weeks of boilerplate work into a standardized `config.yaml` file.
+
+**Ideal for:**
+*   AI Engineers building internal RAG tools.
+*   Developers needing to "chat with their data" instantly.
+*   Researchers testing different embedding models or databases (switch from Chroma to Pinecone in 1 line).
 
 ---
 
-## 🚀 Features
+## 🛠️ Tech Stack & Architecture
 
-- Load text from files or directories
-- Clean and preprocess text efficiently
-- Chunk text for large documents
-- Generate embeddings with **Sentence Transformers**
-- Store and retrieve embeddings using local (**FAISS**, **Chroma**) or cloud (**Pinecone**) vector databases
-- Integrated logging for pipeline operations
-- Fully modular and extendable design
+This project utilizes best-in-class open-source technologies:
+
+*   **Ingestion**: `PyMuPDF` (PDF), `python-docx` (DOCX), `pandas` (CSV), `BeautifulSoup` (HTML).
+*   **Vectorization**: `sentence-transformers` (HuggingFace compatible).
+*   **Vector Database**: 
+    *   **ChromaDB** (Local, persistent, file-based).
+    *   **Pinecone** (Serverless, Cloud-native v3.0+).
+    *   **FAISS** (Via underlying libraries or custom adapters).
+*   **Orchestration**: Custom batch-processing Pipeline.
+
+### 🏗️ Architecture Flow
+
+```mermaid
+graph LR
+    A[Raw Data Folder] --> B(DataLoader);
+    B --> C{Cleaner & Chunker};
+    C --Batching--> D[Embedder Model];
+    D --> E[(Vector Database)];
+    E --> F[Semantic Search API];
+    F --> G[RAG Application / Chatbot];
+```
 
 ---
 
-## 💻 Installation
+## 💡 Use Cases
 
-Install `vectorDBpipe` directly from PyPI:
+### 1. Enterprise Knowledge Base
+Company wikis, PDFs, and policy documents are scattered.
+*   **Solution**: Point `vectorDBpipe` to the shared drive. It indexes 10,000+ docs into Pinecone.
+*   **Result**: Employees get instant, semantic answers ("What is the travel policy?") instead of keyword search.
+
+### 2. Legal / Medical Document Search
+Long documents need to be split intelligently.
+*   **Solution**: Use the standardized chunker (e.g., 512 tokens with overlap).
+*   **Result**: Retrieval finds the *exact paragraph* containing the clause or diagnosis.
+
+### 3. Rapid Prototype for RAG
+You have a hackathon idea but don't want to spend 4 hours setting up FAISS.
+*   **Solution**: `pip install vectordbpipe` -> `pipeline.run()`.
+*   **Result**: Working MVP in 5 minutes.
+
+---
+
+## 📦 Installation
+
+Install the package directly from PyPI:
 
 ```bash
-pip install vectorDBpipe
+pip install vectordbpipe
 ```
+
+### 🔧 Windows Users (DLL Error Constraints)
+If you encounter `WinError 1114` or DLL initialization errors with Torch, install the CPU-optimized binaries:
+
+```bash
+pip install -r requirements-cpu.txt
+```
+*(This forces `intel-openmp` and CPU-only libraries to ensure stability on non-CUDA machines).*
 
 ---
 
 ## ⚙️ Configuration
 
-`vectorDBpipe` uses a `config.yaml` file for configuration. You can customize paths, models, and vector database settings.
+Control your entire pipeline via `config.yaml`. No need to touch the code.
 
-### Pinecone API Key
+```yaml
+# vectorDBpipe/config/config.yaml
 
-If you use the `pinecone` vector database, you must provide your API key via an environment variable. The library will automatically load it.
+paths:
+  data_dir: "data/"  # Folder containing your .pdf, .txt, .docx files
 
-**Linux/macOS:**
+model:
+  name: "sentence-transformers/all-MiniLM-L6-v2" # Any HF model
+  batch_size: 32
+
+vector_db:
+  type: "pinecone"   # Options: "chroma" or "pinecone"
+  index_name: "my-knowledge-base"
+  # For Chroma, use:
+  # persist_directory: "data/chroma_store"
+```
+
+### 🔐 Credentials
+
+Do NOT hardcode API keys. The system looks for environment variables:
+
+**Linux/Mac:**
 ```bash
-export PINECONE_API_KEY="YOUR_API_KEY"
+export PINECONE_API_KEY="your-secret-key"
 ```
 
-**Windows:**
+**Windows PowerShell:**
 ```powershell
-$env:PINECONE_API_KEY="YOUR_API_KEY"
+$env:PINECONE_API_KEY="your-secret-key"
 ```
 
 ---
 
-## ⚙️ Basic Usage
+## 🚀 Step-by-Step Demo: The "10-Line" RAG Pipeline
 
-### 1️⃣ Load Data and Generate Embeddings
+This script detects all files in your `data/` folder, processes them in memory-safe batches, and makes them searchable.
 
 ```python
-from vectorDBpipe.data.loader import DataLoader
-from vectorDBpipe.embeddings.embedder import Embedder
+from vectorDBpipe.pipeline.text_pipeline import TextPipeline
 
-# Load all text files from a directory
-loader = DataLoader("data/")
-data = loader.load_all_files()
+# ---------------------------------------------------------
+# STEP 1: Initialize Pipeline
+# ---------------------------------------------------------
+# Reads config.yaml, sets up logging, connects to DB (Pinecone/Chroma)
+pipeline = TextPipeline()
 
-# Extract text contents
-texts = [d["content"] for d in data]
+# ---------------------------------------------------------
+# STEP 2: Ingest Data (The "Magic" Step)
+# ---------------------------------------------------------
+# Loops through all files in 'data_dir', cleans text, splits into 
+# 512-token chunks, embeds them using HuggingFace model, 
+# and uploads to DB in batches of 100 to save RAM.
+pipeline.process(batch_size=100)
 
-# Create embeddings
-embedder = Embedder()
-vectors = embedder.encode(texts)
+# ---------------------------------------------------------
+# STEP 3: Semantic Search
+# ---------------------------------------------------------
+query = "How does vectorDBpipe reduce workload?"
+results = pipeline.search(query, top_k=3)
 
-print("Vectors shape:", vectors.shape)
+print("--- Search Results ---")
+for match in results:
+    # Metadata contains the original text chunk and source file name
+    print(f"Source: {match.get('metadata', {}).get('source', 'unknown')}")
+    print(f"Content: {match.get('metadata', {}).get('text', '')[:200]}...\n")
 ```
 
 ---
 
-### 2️⃣ Text Cleaning and Chunking
+## 🧠 Deep Dive: How It Reduces Work
+
+### Before `vectorDBpipe` vs. After
+
+| Feature | The "Hard Way" (Manual) | The `vectorDBpipe` Way |
+| :--- | :--- | :--- |
+| **PDF Parsing** | Write `fitz` loops, handle exceptions, merge pages. | `loader.load_data()` handles PDF, DOCX, TXT, HTML auto-magically. |
+| **Chunking** | Write regex wrappers, handle overlaps, off-by-one errors. | `chunk_text(text, chunk_size=512)` built-in utility. |
+| **Embeddings** | Manually loop `model.encode()`, manage tensors. | `Embedder` class abstracts this away (Mock fallback included). |
+| **Scalability** | "Out of Memory" when loading 1000 PDFs. | **Batch Processing** built-in. Flushes data every 100 chunks. |
+| **DB Switching** | Rewrite insert logic for Pinecone connection vs Chroma. | Change `type: pinecone` in YAML. Done. |
+
+### Code Snippet: Scalable Batch Processing
+Use the new **`process(batch_size=N)`** method introduced in v0.1.3 to handle massive datasets.
 
 ```python
-from vectorDBpipe.logger.logging import setup_logger
-from vectorDBpipe.utils.common import clean_text, chunk_text
-
-logger = setup_logger("TextPipeline")
-
-text = "AI   is transforming   the world!"
-cleaned = clean_text(text)
-chunks = chunk_text(cleaned, chunk_size=50)
-
-logger.info(f"Cleaned text: {cleaned}")
-logger.info(f"Generated {len(chunks)} chunks.")
-```
-
-**Output Example:**
-
-```
-INFO:TextPipeline: Cleaned text: ai is transforming the world!
-INFO:TextPipeline: Generated 1 chunks.
+# Even if you have 10GB of text files, this won't crash your RAM.
+pipeline.process(batch_size=50) 
 ```
 
 ---
 
-### 3️⃣ Modular Vector Storage & Retrieval
+## 📁 Project Structure
 
-```python
-from vectorDBpipe.vectorstore.faiss_store import FAISSVectorStore
-
-# Initialize vector store
-vector_store = FAISSVectorStore(dim=384)
-
-# Add embeddings and metadata
-metadata = [{"text": t} for t in texts]
-vector_store.add(vectors, metadata)
-
-# Search similar text
-query = "Artificial Intelligence"
-results = vector_store.search(query, top_k=3)
-print("Search results:", results)
-```
-
----
-
-## 📝 Project Structure
-
-```
+```bash
 vectorDBpipe/
-├── data/                      # Example dataset
+├── config/             # YAML configuration
+├── data/               # Drop your raw files here
 ├── vectorDBpipe/
-│   ├── data/loader.py         # Data loading module
-│   ├── embeddings/embedder.py # Embedding generation
-│   ├── vectorstore/           # Vector DB modules (FAISS, Chroma, Pinecone)
-│   ├── logger/                # Logging setup
-│   └── utils/                 # Helper functions (cleaning, chunking, etc.)
-├── tests/                     # Unit tests
-├── demo/                      # Demo Jupyter notebooks
-├── setup.py
-└── README.md
+│   ├── data/           # Loader logic (PDF/DOCX/TXT parsers)
+│   ├── embeddings/     # SentenceTransformer wrapper
+│   ├── pipeline/       # The "Brain" (Process & Search flow)
+│   └── vectordb/       # Store adapters (Chroma/Pinecone)
+└── requirements.txt    # Production deps
 ```
 
 ---
 
-## 📒 Logging & Debugging
+## 🤝 Contributing
 
-- Use `setup_logger()` to create named loggers for your pipeline.
-- Logs capture preprocessing, embedding, and vector store operations for easier debugging.
+We welcome issues and PRs!
+*   **Report Bugs**: Create an issue on GitHub.
+*   **Updates**: We are working on adding `Qdrant` and `Weaviate` support in v0.2.0.
 
-```python
-logger = setup_logger("TextPipeline")
-logger.info("Pipeline started...")
-```
-
----
-
-## ✅ Contribution Guide
-
-1. **Fork** the repository
-2. **Create a branch:**  
-   `git checkout -b feature/my-feature`
-3. **Add or modify code** with proper docstrings and type hints
-4. **Add tests** under `tests/`
-5. **Submit a Pull Request** with a detailed description
-
----
-
-## 📖 Demo Notebooks
-
-- `demo/TextPipeline_demo.ipynb`: Step-by-step demonstration of data loading, preprocessing, embedding, storage, and search.
-- Visualize similarity search results using `pandas` or `matplotlib`.
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**.  
-See [LICENSE](LICENSE) for more details.
-
----
-
-## 🔗 Contact
-
-**Author:** Yash Desai  
-**Email:** [desaisyash1000@gmail.com](mailto:desaisyash1000@gmail.com)  
-**GitHub:** [https://github.com/yashdesai023/vectorDBpipe](https://github.com/yashdesai023/vectorDBpipe)
-
----
-
-*Ready for contributions and feedback! If you need a polished demo notebook, let me know!*
-
+**Author**: Yash Desai  
+**License**: MIT

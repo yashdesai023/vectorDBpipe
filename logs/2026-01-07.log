@@ -1,0 +1,6 @@
+[2026-01-07 13:50:29] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-01-07 13:50:31] [INFO] Embedder: Generated 1 embeddings.
+[2026-01-07 13:50:56] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-01-07 13:50:56] [INFO] Embedder: Generated 1 embeddings.
+[2026-01-07 13:52:05] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-01-07 13:52:06] [INFO] Embedder: Generated 1 embeddings.

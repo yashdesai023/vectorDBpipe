@@ -1,12 +1,10 @@
+LICENSE
 MANIFEST.in
 README.md
+requirements-cpu.txt
+requirements.txt
 setup.py
 vectorDBpipe/__init__.py
-vectorDBpipe.egg-info/PKG-INFO
-vectorDBpipe.egg-info/SOURCES.txt
-vectorDBpipe.egg-info/dependency_links.txt
-vectorDBpipe.egg-info/requires.txt
-vectorDBpipe.egg-info/top_level.txt
 vectorDBpipe/config/__init__.py
 vectorDBpipe/config/config.yaml
 vectorDBpipe/config/config_manager.py
@@ -27,3 +25,8 @@ vectorDBpipe/utils/__init__.py
 vectorDBpipe/utils/common.py
 vectorDBpipe/vectordb/__init__.py
 vectorDBpipe/vectordb/store.py
+vectordbpipe.egg-info/PKG-INFO
+vectordbpipe.egg-info/SOURCES.txt
+vectordbpipe.egg-info/dependency_links.txt
+vectordbpipe.egg-info/requires.txt
+vectordbpipe.egg-info/top_level.txt
