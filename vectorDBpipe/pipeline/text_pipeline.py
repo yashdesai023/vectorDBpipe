@@ -114,3 +114,27 @@ class TextPipeline:
         self.logger.warning("'run()' is deprecated and will be removed. Please use 'process()' instead. Calling process() now.")
         self.process()
         return True
+
+    def search(self, query: str, top_k: int = 5):
+        """
+        Semantic search for the given query string.
+        
+        :param query: The search query (natural language string).
+        :param top_k: Number of results to return.
+        :return: List of search results.
+        """
+        if not query:
+            return []
+            
+        # Embed the query
+        query_embedding = self.embedder.encode([query])
+        
+        # Handle numpy array to list conversion for single vector
+        if hasattr(query_embedding, "tolist"):
+             # encode returning (1, dim) or (dim,)
+             query_vec = query_embedding[0].tolist() 
+        else:
+             query_vec = query_embedding[0]
+             
+        # Delegate to vector store
+        return self.vector_store.search_vectors(query_vec, top_k=top_k)

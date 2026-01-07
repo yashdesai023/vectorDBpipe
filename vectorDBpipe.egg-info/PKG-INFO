@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: vectordbpipe
-Version: 0.1.3
+Version: 0.1.4
 Summary: A modular text embedding and vector database pipeline for local and cloud vector stores.
 Author: Yash Desai
 Author-email: desaisyash1000@gmail.com
