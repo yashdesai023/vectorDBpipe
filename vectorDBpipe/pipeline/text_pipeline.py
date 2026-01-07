@@ -121,7 +121,7 @@ class TextPipeline:
         
         :param query: The search query (natural language string).
         :param top_k: Number of results to return.
-        :return: List of search results.
+        :return: List of search results (dictionaries with 'id', 'score', 'metadata').
         """
         if not query:
             return []
@@ -136,5 +136,55 @@ class TextPipeline:
         else:
              query_vec = query_embedding[0]
              
-        # Delegate to vector store
-        return self.vector_store.search_vectors(query_vec, top_k=top_k)
+        # Get raw results
+        raw_results = self.vector_store.search_vectors(query_vec, top_k=top_k)
+        
+        normalized_results = []
+
+        # Case A: ChromaDB (Dictionary with list of lists)
+        if isinstance(raw_results, dict) and "ids" in raw_results:
+            # Chroma returns lists of lists (one per query vector). We sent 1 query.
+            # "ids": [['id1', 'id2']], "metadatas": [[{'k': 'v'}, ...]]
+            
+            ids = raw_results.get("ids", [[]])[0]
+            metadatas = raw_results.get("metadatas", [[]])[0]
+            distances = raw_results.get("distances", [[]])[0]
+            documents = raw_results.get("documents", [[]])[0] # Raw text often here in Chroma
+
+            for i in range(len(ids)):
+                # Prepare metadata
+                meta = metadatas[i] if metadatas and i < len(metadatas) else {}
+                if not meta:
+                    meta = {}
+                
+                # Ensure 'text' content is available in metadata for convenience
+                if "text" not in meta and documents and i < len(documents):
+                     meta["text"] = documents[i]
+
+                entry = {
+                    "id": ids[i],
+                    "score": distances[i] if distances and i < len(distances) else 0.0,
+                    "metadata": meta
+                }
+                normalized_results.append(entry)
+
+        # Case B: Pinecone (Object with 'matches' list or dict with 'matches')
+        elif hasattr(raw_results, "matches") or (isinstance(raw_results, dict) and "matches" in raw_results):
+            matches = raw_results.matches if hasattr(raw_results, "matches") else raw_results["matches"]
+            for match in matches:
+                # Handle pinecone object access (dot notation) or dict access
+                m_id = getattr(match, "id", None) or match.get("id")
+                m_score = getattr(match, "score", None) or match.get("score")
+                m_meta = getattr(match, "metadata", None) or match.get("metadata", {})
+                
+                normalized_results.append({
+                    "id": m_id,
+                    "score": m_score,
+                    "metadata": m_meta
+                })
+        
+        # Case C: Unknown/List (Fallback)
+        elif isinstance(raw_results, list):
+             normalized_results = raw_results
+
+        return normalized_results
