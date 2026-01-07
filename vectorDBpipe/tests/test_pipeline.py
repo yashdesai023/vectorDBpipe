@@ -14,7 +14,7 @@ class MockStore:
 
 def test_pipeline_run(monkeypatch):
     # Mock dependencies to avoid external API calls
-    monkeypatch.setattr("vectorDBpipe.data.loader.DataLoader.load_data", lambda self: ["Test document"])
+    monkeypatch.setattr("vectorDBpipe.data.loader.DataLoader.load_data", lambda self: [{"content": "Test document", "source": "test_src"}])
     monkeypatch.setattr("vectorDBpipe.embeddings.embedder.Embedder.embed_texts", lambda self, x: [[0.1, 0.2, 0.3]])
 
     # Mock vector store (before pipeline initialization)

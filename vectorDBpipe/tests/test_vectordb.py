@@ -10,7 +10,7 @@ def test_chroma_insert_and_search(tmp_path):
     result = store.search_vectors([0.1, 0.2, 0.3], top_k=1)
     assert result is not None
 
-@patch("vectorDBpipe.vectordb.store.Pinecone")
+@patch("pinecone.Pinecone")
 def test_pinecone_init_v3(mock_pinecone_cls):
     """Test compatibility with Pinecone v3 client instantiation."""
     # Setup mock client
