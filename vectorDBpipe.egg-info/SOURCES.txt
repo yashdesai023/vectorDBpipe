@@ -5,6 +5,7 @@ requirements-cpu.txt
 requirements.txt
 setup.py
 vectorDBpipe/__init__.py
+vectorDBpipe/cli.py
 vectorDBpipe/config/__init__.py
 vectorDBpipe/config/config.yaml
 vectorDBpipe/config/config_manager.py
