@@ -1,0 +1,55 @@
+[2026-02-16 20:39:17] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 20:39:17] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 20:43:47] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 20:43:47] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 20:43:58] [INFO] TextPipeline: Starting document processing pipeline...
+[2026-02-16 20:43:58] [INFO] TextPipeline: Loading data from: None
+[2026-02-16 20:43:58] [ERROR] TextPipeline: Pipeline failed due to: Data path not provided to DataLoader.
+Traceback (most recent call last):
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\pipeline\text_pipeline.py", line 52, in process
+    documents = self.loader.load_data()
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\data\loader.py", line 35, in load_data
+    raise ValueError("Data path not provided to DataLoader.")
+ValueError: Data path not provided to DataLoader.
+[2026-02-16 20:47:11] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 20:47:11] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 20:47:18] [INFO] TextPipeline: Starting document processing pipeline...
+[2026-02-16 20:47:18] [INFO] TextPipeline: Loading data from: E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\data\sample.txt
+[2026-02-16 20:47:18] [ERROR] TextPipeline: Pipeline failed due to: 'str' object has no attribute 'is_file'
+Traceback (most recent call last):
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\pipeline\text_pipeline.py", line 52, in process
+    documents = self.loader.load_data()
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\data\loader.py", line 37, in load_data
+    if self.data_path.is_file():
+AttributeError: 'str' object has no attribute 'is_file'
+[2026-02-16 20:50:42] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 20:50:43] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 20:50:52] [INFO] TextPipeline: Starting document processing pipeline...
+[2026-02-16 20:50:52] [INFO] TextPipeline: Loading data from: E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\data\sample.txt
+[2026-02-16 20:50:52] [ERROR] TextPipeline: Pipeline failed due to: 'str' object has no attribute 'is_file'
+Traceback (most recent call last):
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\pipeline\text_pipeline.py", line 52, in process
+    documents = self.loader.load_data()
+  File "E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\vectorDBpipe\data\loader.py", line 37, in load_data
+    if self.data_path.is_file():
+AttributeError: 'str' object has no attribute 'is_file'
+[2026-02-16 20:55:11] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 20:55:11] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 20:55:18] [INFO] TextPipeline: Starting document processing pipeline...
+[2026-02-16 20:55:18] [INFO] TextPipeline: Loading data from: E:\Private\AI-PROJECTS-PORTFOLIO-DOCS-ASSETS\ALL-PROJECTS-PACKAGES\GEN-AI Projects\vectorDBpipe\data\sample.txt
+[2026-02-16 20:55:18] [INFO] TextPipeline: Found 1 documents to process.
+[2026-02-16 20:55:18] [INFO] TextPipeline: Processing batch of 1 chunks...
+[2026-02-16 20:55:19] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 20:55:19] [INFO] TextPipeline: Batch stored.
+[2026-02-16 20:55:19] [INFO] TextPipeline: Pipeline completed successfully! Processed 1 total chunks.
+[2026-02-16 21:01:27] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 21:01:27] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 21:01:57] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:02:56] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:06:33] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:06:46] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:06:53] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:09:23] [INFO] TextPipeline: Initializing TextPipeline with configuration
+[2026-02-16 21:09:23] [INFO] Embedder: Initializing embedder with model: sentence-transformers/all-MiniLM-L6-v2
+[2026-02-16 21:09:58] [INFO] Embedder: Generated 1 embeddings.
+[2026-02-16 21:10:06] [INFO] Embedder: Generated 1 embeddings.

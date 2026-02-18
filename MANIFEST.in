@@ -1,3 +1,5 @@
 include vectorDBpipe/config/config.yaml
 include requirements.txt
 include requirements-cpu.txt
+prune vectorDBpipe-tui
+prune frontend-vectordbpipe

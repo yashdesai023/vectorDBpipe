@@ -1,0 +1,27 @@
+model:
+  name: sentence-transformers/all-MiniLM-L6-v2
+embedding:
+  provider: local
+vector_db:
+  type: FAISS
+llm:
+  provider: None
+paths:
+  data_dir: ./data
+  logs_dir: ./logs
+connectors:
+  local:
+    enabled: true
+    path: ./data
+  s3:
+    enabled: false
+    bucket: ''
+    region: us-east-2
+    access_key: ''
+    secret_key: ''
+  notion:
+    enabled: false
+    token: ''
+  gdrive:
+    enabled: false
+    credentials_path: ''

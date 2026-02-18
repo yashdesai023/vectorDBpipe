@@ -3,13 +3,13 @@ from setuptools import setup, find_packages
 
 setup(
     name="vectordbpipe",  # Corrected to lowercase
-    version="0.1.6",      # Updated to a new version
+    version="0.1.8",      # Updated Version for new release
     author="Yash Desai",
     author_email="desaisyash1000@gmail.com",
     description="A modular text embedding and vector database pipeline for local and cloud vector stores.",
     long_description=open("README.md", encoding="utf-8").read() if os.path.exists("README.md") else "",
     long_description_content_type="text/markdown",
-    packages=find_packages(),
+    packages=find_packages(exclude=["vectorDBpipe-tui", "vectorDBpipe-tui.*", "frontend-vectordbpipe", "frontend-vectordbpipe.*", "tests*"]),
     include_package_data=True,
     install_requires=[
         "PyYAML>=6.0",

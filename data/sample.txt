@@ -1,0 +1,4 @@
+This is a sample document about VectorDBPipe.
+VectorDBPipe is a modular ETL pipeline for ingestion and retrieval of documents.
+It supports local embeddings via Sentence Transformers and local vector stores like ChromaDB.
+End of sample document.

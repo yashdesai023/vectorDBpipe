@@ -1,0 +1,5 @@
+FAISS Vector Store
+FAISS (Facebook AI Similarity Search) is a library for efficient similarity search and clustering of dense vectors.
+VectorDBPipe uses faiss-cpu for extremely fast local vector search.
+Unlike ChromaDB, FAISS is primarily an in-memory index, but we have implemented a local persistence layer using pickle to save the index to disk.
+Choose FAISS if you need maximum speed for local workloads.

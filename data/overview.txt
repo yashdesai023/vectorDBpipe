@@ -1,0 +1,4 @@
+VectorDBPipe Overview
+VectorDBPipe is an enterprise-grade ETL pipeline designed for Generative AI applications. 
+It automates the ingestion, cleaning, chunking, and embedding of text data from various sources like PDFs, Word docs, and websites.
+The goal is to prepare data for Retrieval Augmented Generation (RAG) systems.

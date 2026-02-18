@@ -21,7 +21,7 @@ class DataLoader:
         """
         :param data_path: path to a file or directory containing files.
         """
-        self.data_path = Path(data_path) if data_path is not None else None
+        self.data_path = Path(str(data_path)) if data_path else None
         self.supported_ext = [".txt", ".pdf", ".docx", ".csv", ".json", ".html", ".htm"]
 
     def load_data(self) -> List[Dict]:

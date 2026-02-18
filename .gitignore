@@ -1,2 +1,18 @@
 temp_note.md
 venv
+
+# Exclude TUI and Frontend (Separate Repos)
+vectorDBpipe-tui/
+frontend-vectordbpipe/
+
+# Python Build Artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+
+# IDE Settings
+.idea/
+.vscode/
+.DS_Store

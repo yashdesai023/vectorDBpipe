@@ -1,0 +1,5 @@
+ChromaDB Integration
+ChromaDB is a popular open-source vector database used for storing and retrieving vector embeddings.
+In VectorDBPipe, ChromaDB is supported as a local persistent storage backend.
+It is ideal for development and testing because it does not require an API key or cloud setup.
+You can configure ChromaDB in the simple config.yaml file under the 'vector_db' section.
