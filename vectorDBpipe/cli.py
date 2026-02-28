@@ -4,7 +4,9 @@ import sys
 import json
 import os
 from pathlib import Path
-from vectorDBpipe.pipeline.text_pipeline import TextPipeline
+def get_pipeline(config_path):
+    from vectorDBpipe.pipeline.text_pipeline import TextPipeline
+    return TextPipeline(config_path=config_path)
 from vectorDBpipe.config.config_manager import ConfigManager
 
 def main():
@@ -34,7 +36,7 @@ def main():
     if args.command == "ingest":
         try:
             print(f"Initializing pipeline with config: {args.config}")
-            pipeline = TextPipeline(config_path=args.config)
+            pipeline = get_pipeline(args.config)
             
             # Override data_path if source provided
             if args.source:
@@ -51,44 +53,73 @@ def main():
 
     elif args.command == "query":
         try:
-            pipeline = TextPipeline(config_path=args.config)
-
             if args.interactive:
-                print("\n" + "="*40)
-                print(" 🚀 Interactive Query Mode (Fast)")
-                print(" Models loaded. Type 'exit' or 'q' to quit.")
-                print("="*40 + "\n")
+                print("\n\033[90m" + "─"*60 + "\033[0m")
+                print("\033[1;37m VDB INTERACTIVE CHAT\033[0m")
+                print("\033[90m Type 'exit' or 'quit' to end session.\033[0m")
+                print("\033[90m" + "─"*60 + "\033[0m\n")
+                
+                print("\033[90mLoading models & database... \033[0m", end="", flush=True)
+                pipeline = get_pipeline(args.config)
+                print("\033[32mReady\033[0m\n")
                 
                 while True:
                     try:
-                        user_input = input("\n🔎 Query: ").strip()
+                        user_input = input("\033[1;36mYou\n> \033[0m").strip()
                         if user_input.lower() in ['exit', 'quit', 'q']:
-                            print("Bye!")
+                            print("\n\033[90mSession ended.\033[0m")
                             break
                         if not user_input:
                             continue
                             
                         results = pipeline.search(user_input, top_k=args.top_k)
                         
-                        print(f"\nResults for: '{user_input}'")
+                        print(f"\n\033[1;35mAssistant\033[0m")
+                        print("\033[90m" + "─" * 60 + "\033[0m")
+                        
                         if not results:
-                            print("No results found.")
-                        for i, res in enumerate(results):
-                            score = res.get('score', 0)
-                            meta = res.get('metadata', {})
-                            text = meta.get('text', 'N/A')[:200].replace('\n', ' ')
-                            source = meta.get('source', 'Unknown')
-                            print(f"{i+1}. [{score:.4f}] {source}")
-                            print(f"   \"{text}...\"")
+                            print("\033[90mNo relevant context found.\033[0m")
+                        else:
+                            if pipeline.llm:
+                                print("\033[90mThinking...\033[0m", end="\r", flush=True)
+                                # Build context
+                                context_strs = []
+                                for r in results:
+                                    ctx = r.get('document', '')
+                                    if not ctx:
+                                        ctx = r.get('metadata', {}).get('text', '')
+                                    context_strs.append(ctx)
+                                context_str = "\n\n---\n\n".join(context_strs)
+                                
+                                response = pipeline.llm.generate_response(
+                                    system_prompt="You are an intelligent documentation assistant. Answer the user queries completely by extracting information from the provided context. If the context does not contain the answer, say you do not know based on the context.",
+                                    user_query=user_input,
+                                    retrieved_context=context_str
+                                )
+                                print(" "*20, end="\r") # clear the thinking line
+                                print(f"\033[37m{response}\033[0m\n")
+                                print("\033[90mSources:\033[0m")
+                            
+                            for i, res in enumerate(results):
+                                score = res.get('score', 0)
+                                meta = res.get('metadata', {})
+                                text = meta.get('text', 'N/A')[:150].replace('\n', ' ')
+                                source = meta.get('source', 'Unknown')
+                                
+                                if not pipeline.llm:
+                                    print(f"\033[37m{text} ...\033[0m")
+                                print(f"\033[90m[{i+1}] Source: {source} │ Score: {score:.4f}\033[0m")
+                            print()
                             
                     except KeyboardInterrupt:
-                        print("\nExiting...")
+                        print("\n\033[90mSession ended.\033[0m")
                         break
                     except Exception as e:
-                        print(f"Error: {e}")
+                        print(f"\033[31mError: {e}\033[0m")
 
             elif args.text:
                 # One-shot query
+                pipeline = get_pipeline(args.config)
                 results = pipeline.search(args.text, top_k=args.top_k)
                 
                 if args.json:
@@ -116,7 +147,7 @@ def main():
         if args.action == "run":
              # For now, pipeline run is just ingest
             print(f"Running pipeline (ingest) with config: {args.config}")
-            pipeline = TextPipeline(config_path=args.config)
+            pipeline = get_pipeline(args.config)
             pipeline.process()
         elif args.action == "list":
             print("Active Pipelines: [Default]")

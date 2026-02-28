@@ -1,4 +1,5 @@
-from sentence_transformers import SentenceTransformer
+# Lazy load SentenceTransformer inside __init__ to prevent Torch DLL crashes
+import logging
 from typing import List, Union
 import numpy as np
 from vectorDBpipe.logger.logging import setup_logger
@@ -12,18 +13,17 @@ class Embedder:
     Provides compatibility methods used by tests and pipeline.
     """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", batch_size: int = 32):
-        # default model name short form (tests use "all-MiniLM-L6-v2")
-        if model_name.startswith("sentence-transformers/"):
-            model_ref = model_name
-        else:
-            # allow either full HF path or short name
-            model_ref = f"sentence-transformers/{model_name}" if "sentence-transformers" not in model_name else model_name
-
-        logger.info(f"Initializing embedder with model: {model_ref}")
-        self.model_name = model_ref
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2", batch_size: int = 32):
+        logger.info(f"Initializing embedder with model: {model_name}")
+        self.model_name = model_name
         self.batch_size = batch_size
-        self.model = SentenceTransformer(model_ref)
+        
+        import os
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        
+        from sentence_transformers import SentenceTransformer
+        # Force CPU device to prevent 'meta tensor' ThreadPoolExecutor crashes in FastAPI
+        self.model = SentenceTransformer(self.model_name, device="cpu")
 
     def encode(self, texts: Union[str, List[str]]) -> np.ndarray:
         """
@@ -39,6 +39,18 @@ class Embedder:
     # Backwards-compatible alias used by tests
     def embed_texts(self, texts: Union[str, List[str]]) -> np.ndarray:
         return self.encode(texts)
+
+    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """
+        Generate embedding vectors for a list of strings efficiently.
+        """
+        return self.encode(texts).tolist()
+
+    def embed_text(self, text: str) -> List[float]:
+        """
+        Generate an embedding vector for a single string.
+        """
+        return self.encode(text)[0].tolist()
 
     @staticmethod
     def get_supported_models() -> List[str]:

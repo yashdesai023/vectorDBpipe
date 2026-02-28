@@ -1,11 +1,19 @@
 """
 vectorDBpipe
-A modular pipeline for text embedding and vector database storage.
+An All-in-One Enterprise RAG Engine (Omni-RAG Architecture).
 """
 
-__version__ = "0.1.6"
+__version__ = "0.2.0"
 
 from vectorDBpipe.config.config_manager import ConfigManager
-from vectorDBpipe.pipeline import TextPipeline
 
-__all__ = ["ConfigManager", "TextPipeline"]
+def __getattr__(name):
+    if name == "TextPipeline":
+        from vectorDBpipe.pipeline.text_pipeline import TextPipeline
+        return TextPipeline
+    if name == "VDBpipe":
+        from vectorDBpipe.pipeline.vdbpipe import VDBpipe
+        return VDBpipe
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+__all__ = ["ConfigManager", "TextPipeline", "VDBpipe"]

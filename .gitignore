@@ -1,18 +1,87 @@
-temp_note.md
-venv
+# ============================================================
+# vectorDBpipe — .gitignore
+# Only Python SDK package files are tracked.
+# Frontend, Backend, TUI, logs, benchmarks, and temp files
+# are all excluded.
+# ============================================================
 
-# Exclude TUI and Frontend (Separate Repos)
-vectorDBpipe-tui/
-frontend-vectordbpipe/
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+.env
 
-# Python Build Artifacts
+# --- Python Build Artifacts ---
 dist/
 build/
 *.egg-info/
-__pycache__/
-*.pyc
+*.egg
+MANIFEST
 
-# IDE Settings
+# --- Python Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# --- Coverage & Testing Artifacts ---
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+
+# --- Jupyter Notebook Checkpoints ---
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Temporary / Scratch Files ---
+temp_chroma_db/
+temp_note.md
+template.py
+test_sample.txt
+
+# --- Demo / Local Data (not for distribution) ---
+data/
+demo_data/
+data_benchmark/
+benchmark_data_ext/
+
+# --- Benchmark Scripts (internal, not part of package) ---
+run_benchmarks.py
+run_benchmarks_extended.py
+config_benchmark.yaml
+
+# --- Binary / Compiled Assets (not part of package) ---
+bin/
+
+# --- Internal Docs (not for distribution) ---
+docs/
+PUBLISHING.md
+RELEASE_INSTRUCTIONS.md
+
+# --- Separate Repos / Not Part of Python SDK ---
+vectorDBpipe-tui/
+vectordbpipe-frontend/
+frontend-vectordbpipe/
+vectordbpipe-backend/
+
+# --- IDE / OS Files ---
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Type Checker ---
+.mypy_cache/
+.dmypy.json

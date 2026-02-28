@@ -1,27 +1,41 @@
-model:
-  name: sentence-transformers/all-MiniLM-L6-v2
-embedding:
-  provider: local
-vector_db:
-  type: FAISS
-llm:
-  provider: None
-paths:
-  data_dir: ./data
-  logs_dir: ./logs
-connectors:
-  local:
-    enabled: true
-    path: ./data
-  s3:
-    enabled: false
-    bucket: ''
-    region: us-east-2
-    access_key: ''
-    secret_key: ''
-  notion:
-    enabled: false
-    token: ''
-  gdrive:
-    enabled: false
-    credentials_path: ''
+vectorDBpipe:
+  # 1. Embedding Configuration
+  embedding:
+    provider: "local" # Options: local, openai, cohere, google
+    model_name: "sentence-transformers/all-MiniLM-L6-v2" # HuggingFace model string or API model name
+    api_key: null # Null for local models
+
+  # 2. Vector Database Configuration
+  database:
+    provider: "faiss" # Options: faiss, chroma, qdrant, weaviate, pinecone
+    mode: "local" # Options: local, cloud
+    api_key: ${DB_API_KEY} # Required if mode="cloud" or provider="pinecone"
+    collection_name: "default_collection"
+    
+  # 3. LLM Configuration (For Semantic Response Generation)
+  llm:
+    provider: "sarvam" # Options: openai, anthropic, google, groq, sarvam, etc.
+    model_name: "sarvam-m"
+    api_key: "sk_kmqnwbsx_Kk3muVonqKR27FyE58tAxQCW"
+
+  # Data & Setup Parameters
+  paths:
+    data_dir: "./data"
+    logs_dir: "./logs"
+
+  connectors:
+    local:
+      enabled: true
+      path: "./data"
+    s3:
+      enabled: false
+      bucket: ""
+      region: "us-east-2"
+      access_key: ""
+      secret_key: ""
+    notion:
+      enabled: false
+      token: ""
+    gdrive:
+      enabled: false
+      credentials_path: ""

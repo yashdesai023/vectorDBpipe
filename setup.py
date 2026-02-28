@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vectordbpipe",  # Corrected to lowercase
-    version="0.1.9",      # Updated Version for new release
+    version="0.2.0",      # Updated Version for Omni-RAG Architecture
     author="Yash Desai",
     author_email="desaisyash1000@gmail.com",
     description="A modular text embedding and vector database pipeline for local and cloud vector stores.",
@@ -24,7 +24,14 @@ setup(
         "tqdm>=4.66.0",
         "docx2txt>=0.8",
         "beautifulsoup4>=4.12.3",
-        "PyMuPDF>=1.23.26"
+        "PyMuPDF>=1.23.26",
+        "networkx>=3.1",
+        "langchain>=0.1.13",
+        "langchain-core>=0.1.33",
+        "pydantic>=2.0.0",
+        "boto3>=1.26.0",
+        "markdown>=3.4.0",
+        "requests>=2.32.3"
     ],
     python_requires=">=3.8",
     license="MIT",
