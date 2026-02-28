@@ -20,11 +20,16 @@ class VDBpipe(TextPipeline):
     """
     
     def __init__(self, config_path="config.yaml", config_override=None):
-        super().__init__(config_path, config_override)
+        # Store config_override for self-sufficient re-initialization
+        self._config_override = config_override or {}
+
+        try:
+            super().__init__(config_path, config_override)
+        except TypeError:
+            # Old parent without config_override support — call with just config_path
+            super().__init__(config_path)
 
         # --- Defensive attribute initialization ---
-        # Guarantees all attributes exist regardless of which TextPipeline version
-        # is installed (old versions may not call _init_llm_provider, etc.)
         if not hasattr(self, 'llm'):
             self.llm = None
         if not hasattr(self, 'embedder'):
@@ -32,17 +37,90 @@ class VDBpipe(TextPipeline):
         if not hasattr(self, 'vector_store'):
             self.vector_store = None
         if not hasattr(self, 'loader'):
-            from vectorDBpipe.config.config_manager import ConfigManager
-            from vectorDBpipe.data.loader import DataLoader
-            cfg = self.config if hasattr(self, 'config') else ConfigManager(config_path, config_override)
-            data_dir = cfg.get("paths.data_dir", "data/")
+            data_dir = self._config_override.get('paths', {}).get('data_dir', 'data/')
             self.loader = DataLoader(data_dir)
+
+        # Re-initialize any provider that the old parent misconfigured (e.g., embedder with model=None)
+        self._safe_reinit()
 
         self.logger.info("Initializing VDBpipe (Omni-RAG) Architecture...")
 
         # Initialize the Local Knowledge Graph (NetworkX) for GraphRAG
         self.graph = nx.DiGraph()
         self.page_index = {}  # Vectorless Document Structure Store
+
+    def _safe_reinit(self):
+        """
+        Re-initializes any provider that the old TextPipeline parent misconfigured.
+        Runs after super().__init__ to fix providers that got model_name=None, etc.
+        """
+        cfg = self._config_override
+
+        # --- Fix Embedder if model is None or misconfigured ---
+        emb_cfg = cfg.get('embedding', {})
+        provider = emb_cfg.get('provider', 'local').lower()
+        model_name = emb_cfg.get('model_name', 'all-MiniLM-L6-v2')
+
+        embedder = getattr(self, 'embedder', None)
+        # Check if the embedder is missing or has a None internal model
+        embedder_broken = (
+            embedder is None or
+            getattr(embedder, 'model', None) is None and
+            getattr(embedder, 'model_name', None) is None
+        )
+        if embedder_broken and provider in ['local', 'huggingface', '']:
+            try:
+                from vectorDBpipe.embeddings.embedder import Embedder
+                self.embedder = Embedder(model_name=model_name)
+                self.logger.info(f"VDBpipe re-initialized embedder: {model_name}")
+            except Exception as e:
+                self.logger.warning(f"Embedder re-init failed: {e}")
+
+        # --- Fix Vector Store if missing ---
+        db_cfg = cfg.get('database', {})
+        db_provider = db_cfg.get('provider', 'faiss').lower()
+        collection = db_cfg.get('collection_name', 'default_collection')
+        mode = db_cfg.get('mode', 'local')
+        save_dir = cfg.get('paths', {}).get('persistent_db', 'vector_dbs')
+
+        if getattr(self, 'vector_store', None) is None:
+            try:
+                if db_provider == 'faiss':
+                    from vectorDBpipe.vectordb.faiss_client import FaissDatabase
+                    self.vector_store = FaissDatabase(
+                        collection_name=collection, mode=mode, save_dir=save_dir)
+                elif db_provider in ['chroma', 'chromadb']:
+                    from vectorDBpipe.vectordb.chroma_client import ChromaDatabase
+                    self.vector_store = ChromaDatabase(
+                        collection_name=collection, mode=mode, save_dir=save_dir)
+                self.logger.info(f"VDBpipe re-initialized vector store: {db_provider}")
+            except Exception as e:
+                self.logger.warning(f"Vector store re-init failed: {e}")
+
+        # --- Fix LLM if missing ---
+        llm_cfg = cfg.get('llm', {})
+        llm_provider = llm_cfg.get('provider', 'null').lower()
+        if getattr(self, 'llm', None) is None and llm_provider not in ['null', 'none', '']:
+            try:
+                llm_model = llm_cfg.get('model_name', 'gpt-4o-mini')
+                llm_key = llm_cfg.get('api_key') or os.environ.get('OPENAI_API_KEY')
+                if llm_provider == 'openai':
+                    from vectorDBpipe.llms.openai_client import OpenAILLMProvider
+                    self.llm = OpenAILLMProvider(model_name=llm_model, api_key=llm_key)
+                elif llm_provider == 'groq':
+                    from vectorDBpipe.llms.groq_client import GroqLLMProvider
+                    self.llm = GroqLLMProvider(model_name=llm_model, api_key=llm_key)
+                elif llm_provider == 'anthropic':
+                    from vectorDBpipe.llms.anthropic_client import AnthropicLLMProvider
+                    self.llm = AnthropicLLMProvider(model_name=llm_model, api_key=llm_key)
+                self.logger.info(f"VDBpipe re-initialized LLM: {llm_provider}")
+            except Exception as e:
+                self.logger.warning(f"LLM re-init failed: {e}")
+
+        # --- Fix Loader if missing ---
+        if not hasattr(self, 'loader') or self.loader is None:
+            data_dir = cfg.get('paths', {}).get('data_dir', 'data/')
+            self.loader = DataLoader(data_dir)
 
     def ingest(self, data_path: str, batch_size: int = 100):
         """
@@ -63,27 +141,20 @@ class VDBpipe(TextPipeline):
         for doc in documents:
             content, source = doc.get("content"), doc.get("source")
             if not content: continue
-            
+
             cleaned = clean_text(content)
-            
-            # --- OPTIMIZATION: Concurrent Tri-Processing Execution ---
-            # To massively boost speed, we run the slow LLM Extractions (Phase 2/3) 
-            # in parallel with the CPU-bound Vector Chunking (Phase 1)
+
             import concurrent.futures
-            
             with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                # Fire off Phase 2 & 3 (Structural & Graph Extraction) if LLM exists
-                extraction_future = None
-                if self.llm:
-                    extraction_future = executor.submit(self._extract_structure_and_graph, source, cleaned[:2000])
-                
-                # Phase 1: Traditional Vector Chunking (Runs in parallel)
+                # Phase 1: Vector Chunking (always runs)
                 chunk_future = executor.submit(chunk_text, cleaned, 512)
+
+                # Phase 2 & 3: PageIndex + Graph Extraction (always runs — LLM optional)
+                extraction_future = executor.submit(
+                    self._extract_structure_and_graph, source, cleaned[:2000])
+
                 chunks = chunk_future.result()
-                
-                # Wait for LLM Extractions to finish
-                if extraction_future:
-                    extraction_future.result()
+                extraction_future.result()
             
             chunk_batch.extend(chunks)
             docs_batch.extend(chunks)
@@ -120,21 +191,43 @@ class VDBpipe(TextPipeline):
             self.logger.warning(f"embed_and_store failed: {e}")
 
     def _extract_structure_and_graph(self, source: str, content_sample: str):
-        """Mock extraction of structures and entities to populate the PageIndex and Knowledge Graph."""
+        """
+        Phase 2: Always builds the PageIndex (no LLM needed).
+        Phase 3: Extracts graph relationships using LLM (only if configured).
+        """
         try:
-            # 1. Structural Phase (PageIndex)
-            self.page_index[source] = {"chapters": ["Introduction", "Main Body", "Conclusion"], "summary": content_sample[:200]}
-            
-            # 2. Graph Phase (GraphRAG)
-            prompt = f"Extract 2 entity relationships from this text formatted rigidly as 'Entity1|Relationship|Entity2'. Text: {content_sample[:500]}"
-            response = self.llm.generate_response(system_prompt="You are a data extractor.", user_query=prompt)
-            lines = [line for line in response.split("\\n") if "|" in line]
-            for line in lines:
-                parts = line.split("|")
-                if len(parts) == 3:
-                    self.graph.add_edge(parts[0].strip(), parts[2].strip(), relation=parts[1].strip())
+            # ── Phase 2: Structural PageIndex (always runs, no LLM needed) ──
+            # Split the content into rough sections by newline clusters
+            lines = [l.strip() for l in content_sample.split('\n') if l.strip()]
+            headings = [l for l in lines if l.startswith('#') or l.isupper()]
+            summary = content_sample[:300].replace('\n', ' ')
+            self.page_index[source] = {
+                "chapters": headings[:5] if headings else ["Section 1", "Section 2"],
+                "summary": summary,
+                "total_chars": len(content_sample)
+            }
+
+            # ── Phase 3: Graph Extraction (only if LLM is configured) ──
+            llm = getattr(self, 'llm', None)
+            if llm:
+                prompt = (
+                    f"Extract 2 entity relationships from this text. "
+                    f"Format EACH as 'Entity1|Relationship|Entity2' on its own line.\n"
+                    f"Text: {content_sample[:500]}"
+                )
+                response = llm.generate_response(
+                    system_prompt="You are a data extractor. Reply only with the formatted lines.",
+                    user_query=prompt
+                )
+                for line in response.split('\n'):
+                    parts = line.strip().split('|')
+                    if len(parts) == 3:
+                        self.graph.add_edge(
+                            parts[0].strip(), parts[2].strip(),
+                            relation=parts[1].strip()
+                        )
         except Exception as e:
-            self.logger.warning(f"Failed graph extraction on {source}: {e}")
+            self.logger.warning(f"Extraction failed for {source}: {e}")
 
     def query(self, user_query: str) -> str:
         """
