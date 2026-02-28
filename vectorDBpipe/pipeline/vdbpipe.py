@@ -51,56 +51,49 @@ class VDBpipe(TextPipeline):
 
     def _safe_reinit(self):
         """
-        Re-initializes any provider that the old TextPipeline parent misconfigured.
-        Runs after super().__init__ to fix providers that got model_name=None, etc.
+        Re-initializes all providers completely using the Omni-RAG configuration schema
+        (embedding, database, llm) since the old TextPipeline parent uses legacy keys
+        (model, vectordb) which causes it to misconfigure components (e.g., missing model_name).
         """
-        cfg = self._config_override
+        cfg = getattr(self, 'config', None)
+        if not cfg:
+            return  # Config not ready
 
-        # --- Fix Embedder if model is None or misconfigured ---
-        emb_cfg = cfg.get('embedding', {})
-        provider = emb_cfg.get('provider', 'local').lower()
-        model_name = emb_cfg.get('model_name', 'all-MiniLM-L6-v2')
-
-        embedder = getattr(self, 'embedder', None)
-        # Check if the embedder is missing or has a None internal model
-        embedder_broken = (
-            embedder is None or
-            getattr(embedder, 'model', None) is None and
-            getattr(embedder, 'model_name', None) is None
-        )
-        if embedder_broken and provider in ['local', 'huggingface', '']:
+        # --- 1. Re-initialize Embedder ---
+        provider = (cfg.get('embedding') or {}).get('provider', 'local').lower()
+        model_name = (cfg.get('embedding') or {}).get('model_name', 'all-MiniLM-L6-v2')
+        if provider in ['local', 'huggingface', '']:
             try:
                 from vectorDBpipe.embeddings.embedder import Embedder
                 self.embedder = Embedder(model_name=model_name)
-                self.logger.info(f"VDBpipe re-initialized embedder: {model_name}")
+                self.logger.info(f"VDBpipe initialized embedder: {model_name}")
             except Exception as e:
-                self.logger.warning(f"Embedder re-init failed: {e}")
+                self.logger.warning(f"Embedder init failed: {e}")
 
-        # --- Fix Vector Store if missing ---
-        db_cfg = cfg.get('database', {})
+        # --- 2. Re-initialize Vector Store ---
+        db_cfg = cfg.get('database') or {}
         db_provider = db_cfg.get('provider', 'faiss').lower()
         collection = db_cfg.get('collection_name', 'default_collection')
         mode = db_cfg.get('mode', 'local')
-        save_dir = cfg.get('paths', {}).get('persistent_db', 'vector_dbs')
+        save_dir = (cfg.get('paths') or {}).get('persistent_db', 'vector_dbs')
 
-        if getattr(self, 'vector_store', None) is None:
-            try:
-                if db_provider == 'faiss':
-                    from vectorDBpipe.vectordb.faiss_client import FaissDatabase
-                    self.vector_store = FaissDatabase(
-                        collection_name=collection, mode=mode, save_dir=save_dir)
-                elif db_provider in ['chroma', 'chromadb']:
-                    from vectorDBpipe.vectordb.chroma_client import ChromaDatabase
-                    self.vector_store = ChromaDatabase(
-                        collection_name=collection, mode=mode, save_dir=save_dir)
-                self.logger.info(f"VDBpipe re-initialized vector store: {db_provider}")
-            except Exception as e:
-                self.logger.warning(f"Vector store re-init failed: {e}")
+        try:
+            if db_provider == 'faiss':
+                from vectorDBpipe.vectordb.faiss_client import FaissDatabase
+                self.vector_store = FaissDatabase(
+                    collection_name=collection, mode=mode, save_dir=save_dir)
+            elif db_provider in ['chroma', 'chromadb']:
+                from vectorDBpipe.vectordb.chroma_client import ChromaDatabase
+                self.vector_store = ChromaDatabase(
+                    collection_name=collection, mode=mode, save_dir=save_dir)
+            self.logger.info(f"VDBpipe initialized vector store: {db_provider}")
+        except Exception as e:
+            self.logger.warning(f"Vector store init failed: {e}")
 
-        # --- Fix LLM if missing ---
-        llm_cfg = cfg.get('llm', {})
+        # --- 3. Re-initialize LLM ---
+        llm_cfg = cfg.get('llm') or {}
         llm_provider = llm_cfg.get('provider', 'null').lower()
-        if getattr(self, 'llm', None) is None and llm_provider not in ['null', 'none', '']:
+        if llm_provider not in ['null', 'none', '']:
             try:
                 llm_model = llm_cfg.get('model_name', 'gpt-4o-mini')
                 llm_key = llm_cfg.get('api_key') or os.environ.get('OPENAI_API_KEY')
@@ -113,14 +106,15 @@ class VDBpipe(TextPipeline):
                 elif llm_provider == 'anthropic':
                     from vectorDBpipe.llms.anthropic_client import AnthropicLLMProvider
                     self.llm = AnthropicLLMProvider(model_name=llm_model, api_key=llm_key)
-                self.logger.info(f"VDBpipe re-initialized LLM: {llm_provider}")
+                self.logger.info(f"VDBpipe initialized LLM: {llm_provider}")
             except Exception as e:
-                self.logger.warning(f"LLM re-init failed: {e}")
+                self.logger.warning(f"LLM init failed: {e}")
+        else:
+            self.llm = None  # Explicitly disable LLM if null
 
-        # --- Fix Loader if missing ---
-        if not hasattr(self, 'loader') or self.loader is None:
-            data_dir = cfg.get('paths', {}).get('data_dir', 'data/')
-            self.loader = DataLoader(data_dir)
+        # --- 4. Re-initialize Loader ---
+        data_dir = (cfg.get('paths') or {}).get('data_dir', 'data/')
+        self.loader = DataLoader(data_dir)
 
     def ingest(self, data_path: str, batch_size: int = 100):
         """
