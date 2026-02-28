@@ -30,6 +30,10 @@ def dummy_pipeline():
     pipeline.vector_store = MagicMock()
     pipeline.embedder = MagicMock()
 
+    # Mock parent class methods that differ between TextPipeline versions
+    pipeline._embed_and_store = MagicMock()
+    pipeline.query_with_llm = MagicMock(return_value="Mocked LLM answer")
+
     # Give config a minimal mock
     pipeline.config = MagicMock()
 
@@ -85,10 +89,10 @@ def test_omnirouter_classification(dummy_pipeline):
 
 def test_vector_rag_engine(dummy_pipeline):
     """Test the execution of the standard Vector RAG engine."""
-    with patch.object(dummy_pipeline, 'query_with_llm') as mock_query:
-        mock_query.return_value = "Mocked LLM answer"
-        
-        result = dummy_pipeline._engine_1_vector_rag("Test query")
-        
-        mock_query.assert_called_once()
-        assert result == "Mocked LLM answer"
+    # query_with_llm is pre-mocked in the fixture
+    dummy_pipeline.query_with_llm.return_value = "Mocked LLM answer"
+
+    result = dummy_pipeline._engine_1_vector_rag("Test query")
+
+    dummy_pipeline.query_with_llm.assert_called_once()
+    assert result == "Mocked LLM answer"
