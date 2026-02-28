@@ -166,6 +166,59 @@ class VDBpipe(TextPipeline):
             return "ENGINE_3"
         return "ENGINE_1"
 
+    def search(self, query: str, top_k: int = 5):
+        """
+        Version-safe search. Uses embedder + vector_store if available,
+        otherwise returns an empty list gracefully.
+        """
+        embedder = getattr(self, 'embedder', None)
+        vector_store = getattr(self, 'vector_store', None)
+        if embedder is None or vector_store is None:
+            return []
+        try:
+            query_embedding = embedder.embed_text(query)
+            return vector_store.search(query_embedding, top_k=top_k)
+        except Exception as e:
+            self.logger.warning(f"Search failed: {e}")
+            return []
+
+    def query_with_llm(self, user_query: str) -> str:
+        """
+        Version-safe RAG generation. Overrides parent to ensure it always exists.
+        Searches the vector store, builds context, and calls the LLM.
+        Falls back to returning the raw retrieved text if no LLM is configured.
+        """
+        llm = getattr(self, 'llm', None)
+
+        # Retrieve relevant chunks
+        results = self.search(user_query, top_k=3)
+
+        if not results:
+            return "No relevant information found in the knowledge base. Please run ingest() first."
+
+        # Build context string from results
+        context = "\n\n---\n\n".join(
+            [r.get('document', '') for r in results if r.get('document')]
+        )
+
+        # If no LLM configured, return the raw context
+        if llm is None:
+            return f"[Retrieved Context — configure an LLM for generated answers]\n\n{context}"
+
+        try:
+            system_prompt = (
+                "You are an intelligent documentation assistant. "
+                "Answer the user's question using only the provided context."
+            )
+            return llm.generate_response(
+                system_prompt=system_prompt,
+                user_query=user_query,
+                retrieved_context=context
+            )
+        except Exception as e:
+            self.logger.warning(f"LLM generation failed: {e}")
+            return context
+
     def _engine_1_vector_rag(self, query: str) -> str:
         """Fast factual lookup using standard Vector DB."""
         return self.query_with_llm(query)
