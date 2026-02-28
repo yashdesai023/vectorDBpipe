@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=30&pause=1000&color=6C63FF&center=true&vCenter=true&width=600&lines=vectorDBpipe+;All-in-One+Enterprise+RAG+Engine;Tri-Processing+%7C+4+AI+Engines+%7C+15%2B+Sources" alt="Typing SVG"/>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=30&pause=1000&color=6C63FF&center=true&vCenter=true&width=600&lines=vectorDBpipe+;All-in-One+Enterprise+RAG+Engine+;Tri-Processing+;4+AI+Engines+;15%2B+Sources" alt="Typing SVG"/>
 
 <h1> vectorDBpipe</h1>
 
@@ -815,3 +815,4 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
   </p>
   <p><em>If this project saves you hours of glue code, consider giving it a ⭐ on GitHub!</em></p>
 </div>
+
