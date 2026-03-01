@@ -51,56 +51,49 @@ class VDBpipe(TextPipeline):
 
     def _safe_reinit(self):
         """
-        Re-initializes any provider that the old TextPipeline parent misconfigured.
-        Runs after super().__init__ to fix providers that got model_name=None, etc.
+        Re-initializes all providers completely using the Omni-RAG configuration schema
+        (embedding, database, llm) since the old TextPipeline parent uses legacy keys
+        (model, vectordb) which causes it to misconfigure components (e.g., missing model_name).
         """
-        cfg = self._config_override
+        cfg = getattr(self, 'config', None)
+        if not cfg:
+            return  # Config not ready
 
-        # --- Fix Embedder if model is None or misconfigured ---
-        emb_cfg = cfg.get('embedding', {})
-        provider = emb_cfg.get('provider', 'local').lower()
-        model_name = emb_cfg.get('model_name', 'all-MiniLM-L6-v2')
-
-        embedder = getattr(self, 'embedder', None)
-        # Check if the embedder is missing or has a None internal model
-        embedder_broken = (
-            embedder is None or
-            getattr(embedder, 'model', None) is None and
-            getattr(embedder, 'model_name', None) is None
-        )
-        if embedder_broken and provider in ['local', 'huggingface', '']:
+        # --- 1. Re-initialize Embedder ---
+        provider = (cfg.get('embedding') or {}).get('provider', 'local').lower()
+        model_name = (cfg.get('embedding') or {}).get('model_name', 'all-MiniLM-L6-v2')
+        if provider in ['local', 'huggingface', '']:
             try:
                 from vectorDBpipe.embeddings.embedder import Embedder
                 self.embedder = Embedder(model_name=model_name)
-                self.logger.info(f"VDBpipe re-initialized embedder: {model_name}")
+                self.logger.info(f"VDBpipe initialized embedder: {model_name}")
             except Exception as e:
-                self.logger.warning(f"Embedder re-init failed: {e}")
+                self.logger.warning(f"Embedder init failed: {e}")
 
-        # --- Fix Vector Store if missing ---
-        db_cfg = cfg.get('database', {})
+        # --- 2. Re-initialize Vector Store ---
+        db_cfg = cfg.get('database') or {}
         db_provider = db_cfg.get('provider', 'faiss').lower()
         collection = db_cfg.get('collection_name', 'default_collection')
         mode = db_cfg.get('mode', 'local')
-        save_dir = cfg.get('paths', {}).get('persistent_db', 'vector_dbs')
+        save_dir = (cfg.get('paths') or {}).get('persistent_db', 'vector_dbs')
 
-        if getattr(self, 'vector_store', None) is None:
-            try:
-                if db_provider == 'faiss':
-                    from vectorDBpipe.vectordb.faiss_client import FaissDatabase
-                    self.vector_store = FaissDatabase(
-                        collection_name=collection, mode=mode, save_dir=save_dir)
-                elif db_provider in ['chroma', 'chromadb']:
-                    from vectorDBpipe.vectordb.chroma_client import ChromaDatabase
-                    self.vector_store = ChromaDatabase(
-                        collection_name=collection, mode=mode, save_dir=save_dir)
-                self.logger.info(f"VDBpipe re-initialized vector store: {db_provider}")
-            except Exception as e:
-                self.logger.warning(f"Vector store re-init failed: {e}")
+        try:
+            if db_provider == 'faiss':
+                from vectorDBpipe.vectordb.faiss_client import FaissDatabase
+                self.vector_store = FaissDatabase(
+                    collection_name=collection, mode=mode, save_dir=save_dir)
+            elif db_provider in ['chroma', 'chromadb']:
+                from vectorDBpipe.vectordb.chroma_client import ChromaDatabase
+                self.vector_store = ChromaDatabase(
+                    collection_name=collection, mode=mode, save_dir=save_dir)
+            self.logger.info(f"VDBpipe initialized vector store: {db_provider}")
+        except Exception as e:
+            self.logger.warning(f"Vector store init failed: {e}")
 
-        # --- Fix LLM if missing ---
-        llm_cfg = cfg.get('llm', {})
+        # --- 3. Re-initialize LLM ---
+        llm_cfg = cfg.get('llm') or {}
         llm_provider = llm_cfg.get('provider', 'null').lower()
-        if getattr(self, 'llm', None) is None and llm_provider not in ['null', 'none', '']:
+        if llm_provider not in ['null', 'none', '']:
             try:
                 llm_model = llm_cfg.get('model_name', 'gpt-4o-mini')
                 llm_key = llm_cfg.get('api_key') or os.environ.get('OPENAI_API_KEY')
@@ -113,14 +106,24 @@ class VDBpipe(TextPipeline):
                 elif llm_provider == 'anthropic':
                     from vectorDBpipe.llms.anthropic_client import AnthropicLLMProvider
                     self.llm = AnthropicLLMProvider(model_name=llm_model, api_key=llm_key)
-                self.logger.info(f"VDBpipe re-initialized LLM: {llm_provider}")
+                elif llm_provider == 'sarvam':
+                    from vectorDBpipe.llms.sarvam_client import SarvamLLMProvider
+                    self.llm = SarvamLLMProvider(model_name=llm_model, api_key=llm_key)
+                elif llm_provider == 'google' or llm_provider == 'gemini':
+                    from vectorDBpipe.llms.google_client import GoogleLLMProvider
+                    self.llm = GoogleLLMProvider(model_name=llm_model, api_key=llm_key)
+                elif llm_provider == 'cohere':
+                    from vectorDBpipe.llms.cohere_client import CohereLLMProvider
+                    self.llm = CohereLLMProvider(model_name=llm_model, api_key=llm_key)
+                self.logger.info(f"VDBpipe initialized LLM: {llm_provider}")
             except Exception as e:
-                self.logger.warning(f"LLM re-init failed: {e}")
+                self.logger.warning(f"LLM init failed: {e}")
+        else:
+            self.llm = None  # Explicitly disable LLM if null
 
-        # --- Fix Loader if missing ---
-        if not hasattr(self, 'loader') or self.loader is None:
-            data_dir = cfg.get('paths', {}).get('data_dir', 'data/')
-            self.loader = DataLoader(data_dir)
+        # --- 4. Re-initialize Loader ---
+        data_dir = (cfg.get('paths') or {}).get('data_dir', 'data/')
+        self.loader = DataLoader(data_dir)
 
     def ingest(self, data_path: str, batch_size: int = 100):
         """
@@ -193,41 +196,73 @@ class VDBpipe(TextPipeline):
     def _extract_structure_and_graph(self, source: str, content_sample: str):
         """
         Phase 2: Always builds the PageIndex (no LLM needed).
-        Phase 3: Extracts graph relationships using LLM (only if configured).
+        Phase 3: Extracts graph relationships. Uses LLM if configured,
+                 otherwise falls back to regex-based NLP extraction.
         """
         try:
             # ── Phase 2: Structural PageIndex (always runs, no LLM needed) ──
-            # Split the content into rough sections by newline clusters
             lines = [l.strip() for l in content_sample.split('\n') if l.strip()]
             headings = [l for l in lines if l.startswith('#') or l.isupper()]
             summary = content_sample[:300].replace('\n', ' ')
             self.page_index[source] = {
-                "chapters": headings[:5] if headings else ["Section 1", "Section 2"],
+                "chapters": headings[:5] if headings else lines[:3],
                 "summary": summary,
-                "total_chars": len(content_sample)
+                "total_chars": len(content_sample),
+                "raw_lines": lines[:15]  # extra context for Vectorless RAG
             }
 
-            # ── Phase 3: Graph Extraction (only if LLM is configured) ──
+            # ── Phase 3: Graph Extraction ──
             llm = getattr(self, 'llm', None)
             if llm:
+                # LLM path: rich relationship extraction
                 prompt = (
-                    f"Extract 2 entity relationships from this text. "
-                    f"Format EACH as 'Entity1|Relationship|Entity2' on its own line.\n"
-                    f"Text: {content_sample[:500]}"
+                    f"Extract up to 5 entity relationships from this text. "
+                    f"Format EACH as 'Entity1|Relationship|Entity2' on its own line. "
+                    f"No preamble, no explanation.\n"
+                    f"Text: {content_sample[:800]}"
                 )
-                response = llm.generate_response(
-                    system_prompt="You are a data extractor. Reply only with the formatted lines.",
-                    user_query=prompt
-                )
-                for line in response.split('\n'):
-                    parts = line.strip().split('|')
-                    if len(parts) == 3:
-                        self.graph.add_edge(
-                            parts[0].strip(), parts[2].strip(),
-                            relation=parts[1].strip()
-                        )
+                try:
+                    response = llm.generate_response(
+                        system_prompt="You are a knowledge graph extractor. Reply only with pipe-separated triplets.",
+                        user_query=prompt,
+                        retrieved_context=""
+                    )
+                    for line in response.split('\n'):
+                        parts = line.strip().split('|')
+                        if len(parts) == 3:
+                            self.graph.add_edge(
+                                parts[0].strip(), parts[2].strip(),
+                                relation=parts[1].strip()
+                            )
+                except Exception as e:
+                    self.logger.warning(f"LLM graph extraction failed for {source}: {e}")
+                    self._regex_graph_extract(source, content_sample)
+            else:
+                # Regex / NLP path: extract simple noun-phrase pairs
+                self._regex_graph_extract(source, content_sample)
         except Exception as e:
             self.logger.warning(f"Extraction failed for {source}: {e}")
+
+    def _regex_graph_extract(self, source: str, content_sample: str):
+        """Fallback graph extraction using simple regex patterns when LLM is absent."""
+        import re
+        # Pattern: 'X is Y', 'X has Y', 'X includes Y', 'X and Y'
+        relation_patterns = [
+            (r'([A-Z][a-zA-Z ]{2,25}) is ([A-Z][a-zA-Z ]{2,25})', 'is'),
+            (r'([A-Z][a-zA-Z ]{2,25}) has ([A-Z][a-zA-Z ]{2,25})', 'has'),
+            (r'([A-Z][a-zA-Z ]{2,25}) includes ([A-Z][a-zA-Z ]{2,25})', 'includes'),
+            (r'([A-Z][a-zA-Z ]{2,25}) leads? ([A-Z][a-zA-Z ]{2,25})', 'leads'),
+            (r'([A-Z][a-zA-Z ]{2,25}) and ([A-Z][a-zA-Z ]{2,25})', 'related_to'),
+        ]
+        added = 0
+        for pattern, relation in relation_patterns:
+            for match in re.finditer(pattern, content_sample):
+                e1, e2 = match.group(1).strip(), match.group(2).strip()
+                if e1 and e2 and e1 != e2:
+                    self.graph.add_edge(e1, e2, relation=relation)
+                    added += 1
+                    if added >= 15:  # cap to avoid noise
+                        return
 
     def query(self, user_query: str) -> str:
         """
@@ -318,32 +353,145 @@ class VDBpipe(TextPipeline):
 
     def _engine_2_vectorless_rag(self, query: str) -> str:
         """Holistic reading bypassing vectors using the PageIndex."""
-        if not self.llm: return "LLM not configured."
-        index_dump = json.dumps(self.page_index)
-        sys_prompt = "You are a Vectorless RAG Agent. Read the provided page structures and answer fundamentally."
-        return self.llm.generate_response(sys_prompt, user_query=query, retrieved_context=index_dump)
+        if not self.page_index:
+            return "PageIndex is empty. Please run ingest() first."
+        index_dump = json.dumps(self.page_index, indent=2)
+        if not self.llm:
+            # Fallback: return the raw structured PageIndex as text
+            lines = []
+            for src, data in self.page_index.items():
+                lines.append(f"Source: {src}")
+                lines.append(f"Summary: {data.get('summary', '')}")
+                chaps = data.get('chapters', [])
+                if chaps:
+                    lines.append("Chapters/Sections: " + " | ".join(str(c) for c in chaps))
+                lines.append("")
+            return "[Vectorless RAG — configure an LLM for AI-generated answers]\n\n" + "\n".join(lines)
+        sys_prompt = (
+            "You are a Vectorless RAG Agent. The user has NOT done a vector search. "
+            "Instead, read the full page index (document structure) provided and answer holistically."
+        )
+        try:
+            return self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=index_dump
+            )
+        except Exception as e:
+            self.logger.warning(f"Engine 2 LLM call failed: {e}")
+            return index_dump
 
     def _engine_3_graph_rag(self, query: str) -> str:
-        """Traversal over NetworkX Graph for multi-hop reasoning."""
-        if not self.llm: return "LLM not configured."
+        """
+        Traversal over NetworkX Graph for multi-hop reasoning.
+        Filters edges by query relevance before building context.
+        Falls back to Engine 1 (vector RAG) if no relevant graph connections found.
+        """
+        import re as _re
         edges = list(self.graph.edges(data=True))
-        graph_dump = "\\n".join([f"{u} -> {d['relation']} -> {v}" for u, v, d in edges[:20]])
-        if not graph_dump:
-            return "Knowledge graph is currently empty. Run ingestion first."
-        sys_prompt = "You are a GraphRAG Detective. Use the provided Knowledge Graph relationships to answer reasoning questions."
-        return self.llm.generate_response(sys_prompt, user_query=query, retrieved_context=graph_dump)
+        if not edges:
+            # Transparent fallback to vector RAG
+            self.logger.info("Graph empty — falling back to Engine 1 (Vector RAG)")
+            return "[GraphRAG] No graph data available yet. Falling back to vector search:\n\n" + \
+                   self._engine_1_vector_rag(query)
+
+        # ── Filter edges relevant to the query ──────────────────────────────
+        # Tokenize query into meaningful keywords (skip short words)
+        stop_words = {'the', 'is', 'are', 'was', 'how', 'what', 'who', 'why',
+                      'when', 'where', 'a', 'an', 'to', 'of', 'in', 'and', 'or',
+                      'with', 'by', 'from', 'for', 'on', 'at', 'does'}
+        keywords = [w.lower() for w in _re.findall(r'\b\w{3,}\b', query)
+                    if w.lower() not in stop_words]
+
+        def edge_is_relevant(u, v, d):
+            text = f"{u} {d.get('relation', '')} {v}".lower()
+            return any(kw in text for kw in keywords)
+
+        relevant_edges = [(u, v, d) for u, v, d in edges if edge_is_relevant(u, v, d)]
+
+        if relevant_edges:
+            # Use only the relevant subset
+            graph_lines = [
+                f"{u}  --[{d.get('relation', 'related_to')}]-->  {v}"
+                for u, v, d in relevant_edges[:20]
+            ]
+            context_note = f"Found {len(relevant_edges)} relevant connections for query: '{query}'"
+        else:
+            # No direct match — return ALL edges with a note + also run vector search
+            graph_lines = [
+                f"{u}  --[{d.get('relation', 'related_to')}]-->  {v}"
+                for u, v, d in edges[:20]
+            ]
+            context_note = (
+                f"No direct graph matches for '{query}'. Showing full graph "
+                f"({len(edges)} total edges) and supplementing with vector search."
+            )
+
+        graph_dump = "\n".join(graph_lines)
+
+        if not self.llm:
+            # No-LLM fallback: return structured graph output
+            output = f"[GraphRAG — configure an LLM for AI-generated answers]\n"
+            output += f"{context_note}\n\nKnowledge Graph Connections:\n{graph_dump}\n"
+            # Also show vector results for context
+            vector_ctx = self._get_raw_vector_context(query)
+            if vector_ctx:
+                output += f"\n\nRelated Context (from vector search):\n{vector_ctx}"
+            return output
+
+        # LLM-powered GraphRAG
+        sys_prompt = (
+            "You are a GraphRAG Detective. You are given an entity-relationship knowledge graph "
+            "extracted from documents. Use these relationships to answer the user's query. "
+            "If the graph contains entities related to the query, trace the connections to answer. "
+            "If not directly relevant, say so clearly and reason from what IS available."
+        )
+        full_context = f"{context_note}\n\nKnowledge Graph:\n{graph_dump}"
+        try:
+            return self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=full_context
+            )
+        except Exception as e:
+            self.logger.warning(f"Engine 3 LLM call failed: {e}")
+            return f"{context_note}\n\nKnowledge Graph:\n{graph_dump}"
+
+    def _get_raw_vector_context(self, query: str, top_k: int = 2) -> str:
+        """Helper: Get raw text from vector search without LLM."""
+        results = self.search(query, top_k=top_k)
+        if not results:
+            return ""
+        return "\n---\n".join(r.get('document', '') for r in results if r.get('document'))
 
     def _engine_4_extract(self, query: str, schema: Dict[str, str]) -> Dict[str, Any]:
         """Structured output generation using pseudo-LangChain formatting."""
-        if not self.llm: return {"error": "LLM not configured."}
-        sys_prompt = f"Extract information based on query. Return ONLY a valid JSON string matching this schema types: {json.dumps(schema)}"
+        if not self.llm:
+            return {
+                "status": "error",
+                "error": "Engine 4 requires an LLM provider.",
+                "how_to_enable": (
+                    "Re-initialize VDBpipe with an LLM in config_override:\n"
+                    "  pipeline = VDBpipe(config_override={\n"
+                    "    'llm': {'provider': 'sarvam', 'model_name': 'sarvam-m', 'api_key': 'YOUR_KEY'}\n"
+                    "  })"
+                ),
+                "schema_expected": schema
+            }
+        sys_prompt = (
+            f"Extract information based on the user query. "
+            f"Return ONLY a valid JSON object (no markdown, no explanation) "
+            f"matching exactly this schema: {json.dumps(schema)}"
+        )
         try:
-            # Note: A pure implementation would use langchain_core.with_structured_output.
-            # We are mimicking it here to gracefully support any LLM provider bound to `self.llm`
-            response = self.llm.generate_response(sys_prompt, user_query=query)
+            response = self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=""
+            )
             # Find JSON block
             import re
-            match = re.search(r'\\{.*\\}', response, re.DOTALL)
+            match = re.search(r'\{.*\}', response, re.DOTALL)
             if match:
                 return json.loads(match.group(0))
             return {"raw_output": response}
