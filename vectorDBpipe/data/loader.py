@@ -115,9 +115,20 @@ class DataLoader:
         with open(path, "r", encoding="utf-8", errors="ignore") as f: return f.read()
 
     def _load_pdf(self, path: str) -> str:
+        import logging
         text = ""
-        with fitz.open(path) as pdf:
-            for page in pdf: text += page.get_text("text")
+        try:
+            pdf = fitz.open(path)
+        except Exception as e:
+            logging.warning(f"DataLoader: Could not open PDF '{path}': {e}")
+            return text
+        for i in range(len(pdf)):
+            try:
+                page = pdf.load_page(i)
+                text += page.get_text("text")
+            except Exception as e:
+                logging.warning(f"DataLoader: Skipping corrupted page {i} in '{path}': {e}")
+        pdf.close()
         return text
 
     def _load_docx(self, path: str) -> str:
