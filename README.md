@@ -11,7 +11,7 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8%2B-blue.svg" alt="Python 3.8+"/></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
   <a href="https://github.com/yashdesai023/vectorDBpipe/actions"><img src="https://github.com/yashdesai023/vectorDBpipe/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
-  <img src="https://img.shields.io/badge/version-0.2.0-brightgreen.svg" alt="Version 0.2.0"/>
+  <img src="https://img.shields.io/badge/version-0.2.2-brightgreen.svg" alt="Version 0.2.2"/>
   <img src="https://img.shields.io/badge/tests-4%20passed-success.svg" alt="Tests 4 passed"/>
   <img src="https://img.shields.io/badge/PyPI-vectordbpipe-blueviolet.svg" alt="PyPI"/>
 </p>
@@ -749,7 +749,22 @@ Contributions are warmly welcomed! Please follow these steps:
 
 ## 📜 Changelog
 
-### v0.2.0 — Omni-RAG Architecture (February 2026) ⭐ Latest
+### v0.2.2 — Critical Hotfix Release (March 2026) ⭐ Latest
+
+> **Hotfix** — Resolves critical pipeline initialization and engine routing bugs affecting all users of `config_override`.
+
+**Fixed:**
+- **Embedder `'NoneType' object has no attribute 'tokenize'`** — `TextPipeline` was using the legacy `model.name` config key instead of the new `embedding.model_name`. This caused `SentenceTransformer(None)` to be created, crashing all ingestion and queries. `_safe_reinit` now completely bypasses legacy keys and reinitializes all providers from `embedding`, `database`, and `llm` config directly.
+- **LLM not initialized with `config_override`** — Added missing `sarvam`, `google`, and `cohere` LLM provider support to `_safe_reinit`. Sarvam users were silently getting `self.llm = None` even with a valid API key configured.
+- **Graph always empty (0 nodes) after ingestion** — Graph extraction was 100% LLM-gated with no fallback. Added `_regex_graph_extract()` that uses regex pattern matching to extract entity relationships (`X is Y`, `X has Y`, etc.) when no LLM is configured.
+- **Corrupted PDF crash (`FzErrorFormat`)** — `_load_pdf` now loads pages by index with per-page `try/except`, skipping broken pages gracefully instead of crashing the entire ingestion.
+- **Engine 2/3/4 returning "LLM not configured"** — All three engines now return useful, readable fallback content without an LLM. Engine 2 returns formatted PageIndex structure; Engine 3 returns filtered graph edges plus vector search; Engine 4 returns a helpful config snippet.
+- **Engine 3 returning irrelevant graph output** — GraphRAG now filters edges by query keywords, shows a clear `"No direct match"` note, and transparently supplements with vector search when the graph has no matching entities.
+- **`generate_response()` signature mismatch** — All engine calls now correctly pass the `retrieved_context` argument to the LLM provider interface.
+
+---
+
+### v0.2.0 — Omni-RAG Architecture (February 2026)
 
 > **Major Release** — Complete architectural overhaul introducing the 4-engine Omni-RAG stack.
 
