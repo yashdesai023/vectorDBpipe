@@ -106,6 +106,9 @@ class VDBpipe(TextPipeline):
                 elif llm_provider == 'anthropic':
                     from vectorDBpipe.llms.anthropic_client import AnthropicLLMProvider
                     self.llm = AnthropicLLMProvider(model_name=llm_model, api_key=llm_key)
+                elif llm_provider == 'sarvam':
+                    from vectorDBpipe.llms.sarvam_client import SarvamLLMProvider
+                    self.llm = SarvamLLMProvider(model_name=llm_model, api_key=llm_key)
                 self.logger.info(f"VDBpipe initialized LLM: {llm_provider}")
             except Exception as e:
                 self.logger.warning(f"LLM init failed: {e}")
