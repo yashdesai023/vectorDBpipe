@@ -382,36 +382,106 @@ class VDBpipe(TextPipeline):
             return index_dump
 
     def _engine_3_graph_rag(self, query: str) -> str:
-        """Traversal over NetworkX Graph for multi-hop reasoning."""
+        """
+        Traversal over NetworkX Graph for multi-hop reasoning.
+        Filters edges by query relevance before building context.
+        Falls back to Engine 1 (vector RAG) if no relevant graph connections found.
+        """
+        import re as _re
         edges = list(self.graph.edges(data=True))
         if not edges:
-            return "Knowledge graph is empty. Please run ingest() first (entities are extracted during ingestion)."
-        graph_lines = [f"{u} --[{d.get('relation', 'related_to')}]--> {v}" for u, v, d in edges[:30]]
+            # Transparent fallback to vector RAG
+            self.logger.info("Graph empty — falling back to Engine 1 (Vector RAG)")
+            return "[GraphRAG] No graph data available yet. Falling back to vector search:\n\n" + \
+                   self._engine_1_vector_rag(query)
+
+        # ── Filter edges relevant to the query ──────────────────────────────
+        # Tokenize query into meaningful keywords (skip short words)
+        stop_words = {'the', 'is', 'are', 'was', 'how', 'what', 'who', 'why',
+                      'when', 'where', 'a', 'an', 'to', 'of', 'in', 'and', 'or',
+                      'with', 'by', 'from', 'for', 'on', 'at', 'does'}
+        keywords = [w.lower() for w in _re.findall(r'\b\w{3,}\b', query)
+                    if w.lower() not in stop_words]
+
+        def edge_is_relevant(u, v, d):
+            text = f"{u} {d.get('relation', '')} {v}".lower()
+            return any(kw in text for kw in keywords)
+
+        relevant_edges = [(u, v, d) for u, v, d in edges if edge_is_relevant(u, v, d)]
+
+        if relevant_edges:
+            # Use only the relevant subset
+            graph_lines = [
+                f"{u}  --[{d.get('relation', 'related_to')}]-->  {v}"
+                for u, v, d in relevant_edges[:20]
+            ]
+            context_note = f"Found {len(relevant_edges)} relevant connections for query: '{query}'"
+        else:
+            # No direct match — return ALL edges with a note + also run vector search
+            graph_lines = [
+                f"{u}  --[{d.get('relation', 'related_to')}]-->  {v}"
+                for u, v, d in edges[:20]
+            ]
+            context_note = (
+                f"No direct graph matches for '{query}'. Showing full graph "
+                f"({len(edges)} total edges) and supplementing with vector search."
+            )
+
         graph_dump = "\n".join(graph_lines)
+
         if not self.llm:
-            return "[GraphRAG — configure an LLM for AI-generated answers]\n\nKnowledge Graph:\n" + graph_dump
+            # No-LLM fallback: return structured graph output
+            output = f"[GraphRAG — configure an LLM for AI-generated answers]\n"
+            output += f"{context_note}\n\nKnowledge Graph Connections:\n{graph_dump}\n"
+            # Also show vector results for context
+            vector_ctx = self._get_raw_vector_context(query)
+            if vector_ctx:
+                output += f"\n\nRelated Context (from vector search):\n{vector_ctx}"
+            return output
+
+        # LLM-powered GraphRAG
         sys_prompt = (
-            "You are a GraphRAG Detective. Use the provided entity-relationship graph to answer "
-            "multi-hop reasoning questions. Follow entity connections to trace the answer."
+            "You are a GraphRAG Detective. You are given an entity-relationship knowledge graph "
+            "extracted from documents. Use these relationships to answer the user's query. "
+            "If the graph contains entities related to the query, trace the connections to answer. "
+            "If not directly relevant, say so clearly and reason from what IS available."
         )
+        full_context = f"{context_note}\n\nKnowledge Graph:\n{graph_dump}"
         try:
             return self.llm.generate_response(
                 system_prompt=sys_prompt,
                 user_query=query,
-                retrieved_context=graph_dump
+                retrieved_context=full_context
             )
         except Exception as e:
             self.logger.warning(f"Engine 3 LLM call failed: {e}")
-            return graph_dump
+            return f"{context_note}\n\nKnowledge Graph:\n{graph_dump}"
+
+    def _get_raw_vector_context(self, query: str, top_k: int = 2) -> str:
+        """Helper: Get raw text from vector search without LLM."""
+        results = self.search(query, top_k=top_k)
+        if not results:
+            return ""
+        return "\n---\n".join(r.get('document', '') for r in results if r.get('document'))
 
     def _engine_4_extract(self, query: str, schema: Dict[str, str]) -> Dict[str, Any]:
         """Structured output generation using pseudo-LangChain formatting."""
         if not self.llm:
-            return {"error": "LLM not configured. Please set llm.provider in config_override.",
-                    "schema_expected": schema}
+            return {
+                "status": "error",
+                "error": "Engine 4 requires an LLM provider.",
+                "how_to_enable": (
+                    "Re-initialize VDBpipe with an LLM in config_override:\n"
+                    "  pipeline = VDBpipe(config_override={\n"
+                    "    'llm': {'provider': 'sarvam', 'model_name': 'sarvam-m', 'api_key': 'YOUR_KEY'}\n"
+                    "  })"
+                ),
+                "schema_expected": schema
+            }
         sys_prompt = (
             f"Extract information based on the user query. "
-            f"Return ONLY a valid JSON object (no markdown, no explanation) matching exactly this schema: {json.dumps(schema)}"
+            f"Return ONLY a valid JSON object (no markdown, no explanation) "
+            f"matching exactly this schema: {json.dumps(schema)}"
         )
         try:
             response = self.llm.generate_response(
