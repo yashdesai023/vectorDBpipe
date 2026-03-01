@@ -196,41 +196,73 @@ class VDBpipe(TextPipeline):
     def _extract_structure_and_graph(self, source: str, content_sample: str):
         """
         Phase 2: Always builds the PageIndex (no LLM needed).
-        Phase 3: Extracts graph relationships using LLM (only if configured).
+        Phase 3: Extracts graph relationships. Uses LLM if configured,
+                 otherwise falls back to regex-based NLP extraction.
         """
         try:
             # ── Phase 2: Structural PageIndex (always runs, no LLM needed) ──
-            # Split the content into rough sections by newline clusters
             lines = [l.strip() for l in content_sample.split('\n') if l.strip()]
             headings = [l for l in lines if l.startswith('#') or l.isupper()]
             summary = content_sample[:300].replace('\n', ' ')
             self.page_index[source] = {
-                "chapters": headings[:5] if headings else ["Section 1", "Section 2"],
+                "chapters": headings[:5] if headings else lines[:3],
                 "summary": summary,
-                "total_chars": len(content_sample)
+                "total_chars": len(content_sample),
+                "raw_lines": lines[:15]  # extra context for Vectorless RAG
             }
 
-            # ── Phase 3: Graph Extraction (only if LLM is configured) ──
+            # ── Phase 3: Graph Extraction ──
             llm = getattr(self, 'llm', None)
             if llm:
+                # LLM path: rich relationship extraction
                 prompt = (
-                    f"Extract 2 entity relationships from this text. "
-                    f"Format EACH as 'Entity1|Relationship|Entity2' on its own line.\n"
-                    f"Text: {content_sample[:500]}"
+                    f"Extract up to 5 entity relationships from this text. "
+                    f"Format EACH as 'Entity1|Relationship|Entity2' on its own line. "
+                    f"No preamble, no explanation.\n"
+                    f"Text: {content_sample[:800]}"
                 )
-                response = llm.generate_response(
-                    system_prompt="You are a data extractor. Reply only with the formatted lines.",
-                    user_query=prompt
-                )
-                for line in response.split('\n'):
-                    parts = line.strip().split('|')
-                    if len(parts) == 3:
-                        self.graph.add_edge(
-                            parts[0].strip(), parts[2].strip(),
-                            relation=parts[1].strip()
-                        )
+                try:
+                    response = llm.generate_response(
+                        system_prompt="You are a knowledge graph extractor. Reply only with pipe-separated triplets.",
+                        user_query=prompt,
+                        retrieved_context=""
+                    )
+                    for line in response.split('\n'):
+                        parts = line.strip().split('|')
+                        if len(parts) == 3:
+                            self.graph.add_edge(
+                                parts[0].strip(), parts[2].strip(),
+                                relation=parts[1].strip()
+                            )
+                except Exception as e:
+                    self.logger.warning(f"LLM graph extraction failed for {source}: {e}")
+                    self._regex_graph_extract(source, content_sample)
+            else:
+                # Regex / NLP path: extract simple noun-phrase pairs
+                self._regex_graph_extract(source, content_sample)
         except Exception as e:
             self.logger.warning(f"Extraction failed for {source}: {e}")
+
+    def _regex_graph_extract(self, source: str, content_sample: str):
+        """Fallback graph extraction using simple regex patterns when LLM is absent."""
+        import re
+        # Pattern: 'X is Y', 'X has Y', 'X includes Y', 'X and Y'
+        relation_patterns = [
+            (r'([A-Z][a-zA-Z ]{2,25}) is ([A-Z][a-zA-Z ]{2,25})', 'is'),
+            (r'([A-Z][a-zA-Z ]{2,25}) has ([A-Z][a-zA-Z ]{2,25})', 'has'),
+            (r'([A-Z][a-zA-Z ]{2,25}) includes ([A-Z][a-zA-Z ]{2,25})', 'includes'),
+            (r'([A-Z][a-zA-Z ]{2,25}) leads? ([A-Z][a-zA-Z ]{2,25})', 'leads'),
+            (r'([A-Z][a-zA-Z ]{2,25}) and ([A-Z][a-zA-Z ]{2,25})', 'related_to'),
+        ]
+        added = 0
+        for pattern, relation in relation_patterns:
+            for match in re.finditer(pattern, content_sample):
+                e1, e2 = match.group(1).strip(), match.group(2).strip()
+                if e1 and e2 and e1 != e2:
+                    self.graph.add_edge(e1, e2, relation=relation)
+                    added += 1
+                    if added >= 15:  # cap to avoid noise
+                        return
 
     def query(self, user_query: str) -> str:
         """
@@ -321,32 +353,75 @@ class VDBpipe(TextPipeline):
 
     def _engine_2_vectorless_rag(self, query: str) -> str:
         """Holistic reading bypassing vectors using the PageIndex."""
-        if not self.llm: return "LLM not configured."
-        index_dump = json.dumps(self.page_index)
-        sys_prompt = "You are a Vectorless RAG Agent. Read the provided page structures and answer fundamentally."
-        return self.llm.generate_response(sys_prompt, user_query=query, retrieved_context=index_dump)
+        if not self.page_index:
+            return "PageIndex is empty. Please run ingest() first."
+        index_dump = json.dumps(self.page_index, indent=2)
+        if not self.llm:
+            # Fallback: return the raw structured PageIndex as text
+            lines = []
+            for src, data in self.page_index.items():
+                lines.append(f"Source: {src}")
+                lines.append(f"Summary: {data.get('summary', '')}")
+                chaps = data.get('chapters', [])
+                if chaps:
+                    lines.append("Chapters/Sections: " + " | ".join(str(c) for c in chaps))
+                lines.append("")
+            return "[Vectorless RAG — configure an LLM for AI-generated answers]\n\n" + "\n".join(lines)
+        sys_prompt = (
+            "You are a Vectorless RAG Agent. The user has NOT done a vector search. "
+            "Instead, read the full page index (document structure) provided and answer holistically."
+        )
+        try:
+            return self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=index_dump
+            )
+        except Exception as e:
+            self.logger.warning(f"Engine 2 LLM call failed: {e}")
+            return index_dump
 
     def _engine_3_graph_rag(self, query: str) -> str:
         """Traversal over NetworkX Graph for multi-hop reasoning."""
-        if not self.llm: return "LLM not configured."
         edges = list(self.graph.edges(data=True))
-        graph_dump = "\\n".join([f"{u} -> {d['relation']} -> {v}" for u, v, d in edges[:20]])
-        if not graph_dump:
-            return "Knowledge graph is currently empty. Run ingestion first."
-        sys_prompt = "You are a GraphRAG Detective. Use the provided Knowledge Graph relationships to answer reasoning questions."
-        return self.llm.generate_response(sys_prompt, user_query=query, retrieved_context=graph_dump)
+        if not edges:
+            return "Knowledge graph is empty. Please run ingest() first (entities are extracted during ingestion)."
+        graph_lines = [f"{u} --[{d.get('relation', 'related_to')}]--> {v}" for u, v, d in edges[:30]]
+        graph_dump = "\n".join(graph_lines)
+        if not self.llm:
+            return "[GraphRAG — configure an LLM for AI-generated answers]\n\nKnowledge Graph:\n" + graph_dump
+        sys_prompt = (
+            "You are a GraphRAG Detective. Use the provided entity-relationship graph to answer "
+            "multi-hop reasoning questions. Follow entity connections to trace the answer."
+        )
+        try:
+            return self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=graph_dump
+            )
+        except Exception as e:
+            self.logger.warning(f"Engine 3 LLM call failed: {e}")
+            return graph_dump
 
     def _engine_4_extract(self, query: str, schema: Dict[str, str]) -> Dict[str, Any]:
         """Structured output generation using pseudo-LangChain formatting."""
-        if not self.llm: return {"error": "LLM not configured."}
-        sys_prompt = f"Extract information based on query. Return ONLY a valid JSON string matching this schema types: {json.dumps(schema)}"
+        if not self.llm:
+            return {"error": "LLM not configured. Please set llm.provider in config_override.",
+                    "schema_expected": schema}
+        sys_prompt = (
+            f"Extract information based on the user query. "
+            f"Return ONLY a valid JSON object (no markdown, no explanation) matching exactly this schema: {json.dumps(schema)}"
+        )
         try:
-            # Note: A pure implementation would use langchain_core.with_structured_output.
-            # We are mimicking it here to gracefully support any LLM provider bound to `self.llm`
-            response = self.llm.generate_response(sys_prompt, user_query=query)
+            response = self.llm.generate_response(
+                system_prompt=sys_prompt,
+                user_query=query,
+                retrieved_context=""
+            )
             # Find JSON block
             import re
-            match = re.search(r'\\{.*\\}', response, re.DOTALL)
+            match = re.search(r'\{.*\}', response, re.DOTALL)
             if match:
                 return json.loads(match.group(0))
             return {"raw_output": response}
