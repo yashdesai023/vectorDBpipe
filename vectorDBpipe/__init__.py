@@ -3,7 +3,7 @@ vectorDBpipe
 An All-in-One Enterprise RAG Engine (Omni-RAG Architecture).
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.3"
 
 from vectorDBpipe.config.config_manager import ConfigManager
 

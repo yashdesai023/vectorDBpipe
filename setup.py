@@ -3,15 +3,16 @@ from setuptools import setup, find_packages
 
 setup(
     name="vectordbpipe",
-    version="0.2.2",
+    version="0.2.3",
     author="Yash Desai",
     author_email="desaisyash1000@gmail.com",
 
     # ─── PyPI short description (appears in search results) ───────────────────
     description=(
-        "vectorDBpipe v0.2.2 — Enterprise Omni-RAG SDK. "
+        "vectorDBpipe v0.2.3 — Enterprise Omni-RAG SDK. "
         "Tri-Processing Ingestion + 4 AI Engines (Vector RAG, Vectorless RAG, "
         "GraphRAG, Structured JSON Extract) + 15+ data connectors. "
+        "Hotfix: includes LLM provider subpackage (sarvam, openai, groq, anthropic). "
         "One pipeline. One API. Zero glue code."
     ),
 
