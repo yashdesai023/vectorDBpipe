@@ -43,7 +43,7 @@ class DataLoader:
         """
         self.data_path = str(data_path) if data_path else None
         self.api_keys = api_keys or {}
-        self.supported_ext = [".txt", ".pdf", ".docx", ".csv", ".json", ".html", ".htm", ".md", ".xml"]
+        self.supported_ext = [".txt", ".pdf", ".docx", ".csv", ".json", ".html", ".htm", ".md", ".xml", ".pptx"]
 
     def load_data(self) -> List[Dict]:
         """
@@ -108,6 +108,8 @@ class DataLoader:
             return self._load_markdown(path)
         elif ext == ".xml":
             return self._load_xml(path)
+        elif ext == ".pptx":
+            return self._load_pptx(path)
         return ""
 
     # --- 1-8. Local File Integrations ---
@@ -156,6 +158,25 @@ class DataLoader:
     def _load_xml(self, path: str) -> str:
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
             return BeautifulSoup(f, "xml").get_text(separator=" ", strip=True)
+
+    def _load_pptx(self, path: str) -> str:
+        """
+        Extract text from all slides in a PowerPoint (.pptx) file.
+        Requires: pip install python-pptx
+        """
+        try:
+            from pptx import Presentation  # python-pptx
+        except ImportError:
+            raise ImportError(
+                "python-pptx is required to load PPTX files: pip install python-pptx"
+            )
+        prs = Presentation(path)
+        slide_texts = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    slide_texts.append(shape.text.strip())
+        return " ".join(slide_texts)
 
     # --- 9-10. Cloud / Web Integrations ---
     def _load_s3(self, uri: str) -> List[Dict]:

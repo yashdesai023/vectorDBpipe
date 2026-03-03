@@ -1,31 +1,54 @@
-# Core ML + Vector Database
-chromadb>=0.5.0
+# ════════════════════════════════════════════════════════════════
+#  vectorDBpipe — requirements.txt
+#  Last updated: v0.2.3 + all improvements
+#  Install:  pip install -r requirements.txt
+# ════════════════════════════════════════════════════════════════
+
+# ─── Core ML / Embeddings ────────────────────────────────────────
 sentence-transformers>=3.0.1
+torch>=2.2.0
+torchvision
+transformers>=4.28.1
+
+# ─── Vector Databases ────────────────────────────────────────────
 faiss-cpu>=1.7.4
+chromadb>=0.5.0
+pinecone-client>=3.0.0
 
-# Data Processing & Parsing
-beautifulsoup4>=4.12.2
-pandas>=2.2.2
-numpy>=1.26.4
+# ─── Knowledge Graph ─────────────────────────────────────────────
+networkx>=3.1
+
+# ─── LangChain (Engine 4 structured extraction) ──────────────────
+langchain>=0.1.13
+langchain-core>=0.1.33
+pydantic>=2.0.0
+
+# ─── Data Parsing & Document Loaders ─────────────────────────────
+PyMuPDF>=1.23.26           # PDF loading (fitz)
+python-docx>=1.1.0         # .docx files
+docx2txt>=0.8              # .docx alternate parser
+beautifulsoup4>=4.12.2     # HTML / XML parsing
+lxml>=4.9.0                # XML/HTML backend for BeautifulSoup
+python-pptx>=0.6.23        # PPTX loading (NEW — Improvement #13)
+markdown>=3.4.0            # Markdown files
+pandas>=2.0.0              # CSV, Excel
+
+# ─── Cloud / API Connectors ──────────────────────────────────────
+boto3>=1.26.0              # AWS S3
+requests>=2.32.3           # HTTP (LLM APIs, web URL loader)
+
+# ─── Config & Utilities ──────────────────────────────────────────
 PyYAML>=6.0.1
-pypdf>=2.12.1
-python-docx>=1.1.0
-
-# Configuration & Logging
+numpy>=1.26.4
+tqdm>=4.66.0
 python-dotenv>=1.0.1
-tqdm>=4.66.4
-
-# Testing & Coverage
-pytest>=8.4.2
-pytest-cov>=7.0.0
-tox>=4.15.0
-
-# Optional Utilities
-requests>=2.32.3
 typing-extensions>=4.12.2
 
-# For Local Development / Debug
-ipython>=8.26.0
-black>=24.8.0
-isort>=5.13.2
-PyMuPDF  # <-- This is the correct package for fitz
+# ─── Testing ─────────────────────────────────────────────────────
+pytest>=8.4.2
+pytest-cov>=7.0.0
+
+# ─── Dev Tools (optional, comment out for prod installs) ─────────
+# black>=24.8.0
+# isort>=5.13.2
+# ipython>=8.26.0
