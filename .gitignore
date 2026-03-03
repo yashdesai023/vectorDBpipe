@@ -68,7 +68,10 @@ docs/
 PUBLISHING.md
 RELEASE_INSTRUCTIONS.md
 
-# --- Separate Repos / Not Part of Python SDK ---
+# --- Separate Repos / Separate Deployments ---
+# vectorDBpipe-tui  → published on npm  (do NOT add to PyPI repo)
+# vectordbpipe-backend → separate deployment (not part of Python SDK)
+# frontend → separate deployment
 vectorDBpipe-tui/
 vectordbpipe-frontend/
 frontend-vectordbpipe/
