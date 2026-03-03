@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vectordbpipe",
-    version="0.2.3",
+    version="0.2.4",
     author="Yash Desai",
     author_email="desaisyash1000@gmail.com",
 
@@ -58,6 +58,7 @@ setup(
         "pydantic>=2.0.0",
         "boto3>=1.26.0",
         "markdown>=3.4.0",
+        "python-pptx>=0.6.23",
         "requests>=2.32.3",
     ],
 
